@@ -142,12 +142,7 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
               {isSeller ? (
                 <DeleteProductButton productId={product.id} variant="full" />
               ) : (
-                <>
-                  <AddToCartButton productId={product.id} />
-                  <button className="w-full rounded-full border border-zinc-200 py-4 text-base font-bold text-zinc-900 transition-all hover:bg-zinc-50 active:scale-[0.98]">
-                    Message Seller
-                  </button>
-                </>
+                <AddToCartButton productId={product.id} />
               )}
             </div>
           </div>

@@ -32,6 +32,26 @@ interface TransactionRow extends RowDataPacket {
   created_at: Date;
 }
 
+interface OrderItemRow extends RowDataPacket {
+  order_id: number;
+  product_name: string;
+  price: string;
+  quantity: number;
+}
+
+interface SalesRow extends RowDataPacket {
+  total_revenue: string;
+  total_sales: number;
+}
+
+interface SaleItemRow extends RowDataPacket {
+  order_id: number;
+  product_name: string;
+  price: string;
+  quantity: number;
+  created_at: Date;
+}
+
 async function getUserProducts(userId: string) {
   try {
     const [rows] = await pool.query<ProductRow[]>(
@@ -72,6 +92,60 @@ async function getUserTransactions(userId: string) {
   }
 }
 
+async function getOrderItems(orderIds: number[]) {
+  if (orderIds.length === 0) return [];
+  try {
+    const [rows] = await pool.query<OrderItemRow[]>(
+      `SELECT oi.order_id, p.name as product_name, oi.price, oi.quantity
+       FROM order_items oi
+       JOIN products p ON oi.product_id = p.id
+       WHERE oi.order_id IN (?)`,
+      [orderIds]
+    );
+    return rows;
+  } catch (error) {
+    console.error("Error fetching order items:", error);
+    return [];
+  }
+}
+
+async function getSellerStats(userId: string) {
+  try {
+    const [rows] = await pool.query<SalesRow[]>(
+      `SELECT 
+         COALESCE(SUM(price * quantity), 0) as total_revenue,
+         COUNT(*) as total_sales
+       FROM order_items
+       WHERE seller_id = ?`,
+      [userId]
+    );
+    return rows[0];
+  } catch (error) {
+    console.error("Error fetching seller stats:", error);
+    return { total_revenue: "0", total_sales: 0 };
+  }
+}
+
+async function getRecentSales(userId: string) {
+  try {
+    const [rows] = await pool.query<SaleItemRow[]>(
+      `SELECT oi.order_id, p.name as product_name, oi.price, oi.quantity, o.created_at
+       FROM order_items oi
+       JOIN products p ON oi.product_id = p.id
+       JOIN orders o ON oi.order_id = o.id
+       WHERE oi.seller_id = ?
+       ORDER BY o.created_at DESC
+       LIMIT 5`,
+      [userId]
+    );
+    return rows;
+  } catch (error) {
+    console.error("Error fetching recent sales:", error);
+    return [];
+  }
+}
+
+
 function CheckoutSuccessMessage() {
   return (
     <div className="bg-green-50 border border-green-100 rounded-2xl p-4 mb-8 flex items-center gap-3">
@@ -105,6 +179,10 @@ export default async function ProfilePage({
   const isOwnProfile = session?.user?.id === id;
   const userProducts = await getUserProducts(id);
   const transactions = isOwnProfile ? await getUserTransactions(id) : [];
+  const orderIds = transactions.map(t => t.order_id);
+  const allOrderItems = await getOrderItems(orderIds);
+  const sellerStats = isOwnProfile ? await getSellerStats(id) : null;
+  const recentSales = isOwnProfile ? await getRecentSales(id) : [];
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -167,6 +245,47 @@ export default async function ProfilePage({
             </div>
           </section>
 
+          {/* Seller Dashboard for own profile */}
+          {isOwnProfile && sellerStats && (
+            <section className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100">
+              <h2 className="text-xl font-bold text-zinc-900 mb-6">Seller Dashboard</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
+                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Total Revenue</p>
+                  <p className="text-3xl font-black text-blue-600">₱{parseFloat(sellerStats.total_revenue).toLocaleString()}</p>
+                  <p className="mt-2 text-xs text-blue-500 font-medium">Earnings from successful sales</p>
+                </div>
+                <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Sales</p>
+                  <p className="text-3xl font-black text-zinc-900">{sellerStats.total_sales}</p>
+                  <p className="mt-2 text-xs text-zinc-500 font-medium">Number of items sold</p>
+                </div>
+              </div>
+
+              {recentSales.length > 0 && (
+                <div className="mt-8">
+                  <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-4">Recent Sales</h3>
+                  <div className="space-y-3">
+                    {recentSales.map((sale, idx) => (
+                      <div key={`sale-${idx}`} className="flex items-center justify-between p-4 rounded-xl border border-zinc-100 bg-zinc-50/30">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                            #{sale.order_id}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-zinc-900">{sale.product_name}</p>
+                            <p className="text-[10px] text-zinc-500 font-bold uppercase">{new Date(sale.created_at).toLocaleDateString()} • Qty: {sale.quantity}</p>
+                          </div>
+                        </div>
+                        <p className="text-sm font-black text-zinc-900">₱{parseFloat(sale.price).toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Transactions section for own profile */}
           {isOwnProfile && (
             <section className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100">
@@ -176,18 +295,35 @@ export default async function ProfilePage({
                   <p className="text-zinc-500">No purchases yet.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {transactions.map((t) => (
-                    <div key={t.order_id} className="flex items-center justify-between p-4 rounded-xl border border-zinc-100 bg-zinc-50/50">
-                      <div>
-                        <p className="text-sm font-bold text-zinc-900">Order #{t.order_id}</p>
-                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">{new Date(t.created_at).toLocaleDateString()}</p>
+                    <div key={t.order_id} className="p-6 rounded-2xl border border-zinc-100 bg-zinc-50/50">
+                      <div className="flex items-center justify-between mb-4 pb-4 border-b border-zinc-100">
+                        <div>
+                          <p className="text-sm font-bold text-zinc-900">Order #{t.order_id}</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">{new Date(t.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-black text-blue-600">₱{parseFloat(t.total_amount).toLocaleString()}</p>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                            {t.status}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-zinc-900">₱{parseFloat(t.total_amount).toLocaleString()}</p>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-50 px-2 py-0.5 rounded">
-                          {t.status}
-                        </span>
+                      <div className="space-y-3">
+                        {allOrderItems
+                          .filter(item => item.order_id === t.order_id)
+                          .map((item, idx) => (
+                            <div key={`item-${idx}`} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="h-5 w-5 rounded bg-zinc-200 flex items-center justify-center text-[10px] font-bold text-zinc-600">
+                                  {item.quantity}x
+                                </span>
+                                <span className="font-medium text-zinc-700">{item.product_name}</span>
+                              </div>
+                              <p className="text-zinc-500 italic">₱{parseFloat(item.price).toLocaleString()} / unit</p>
+                            </div>
+                          ))}
                       </div>
                     </div>
                   ))}
