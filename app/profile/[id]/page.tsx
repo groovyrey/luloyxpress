@@ -219,12 +219,12 @@ export default async function ProfilePage({
                 {userProducts.map((product) => (
                   <div key={product.id} className="relative group">
                     <Link href={`/products/${product.id}`} className="border border-zinc-100 rounded-xl overflow-hidden p-3 transition-hover hover:border-blue-100 block">
-                      <div className="aspect-square w-full mb-3 rounded-lg overflow-hidden bg-zinc-50 relative">
+                      <div className="aspect-square w-full mb-3 rounded-lg overflow-hidden bg-white relative">
                         <Image 
                           src={product.image} 
                           alt={product.name} 
                           fill 
-                          className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                          className="object-contain group-hover:scale-105 transition-transform duration-500" 
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         />
                       </div>

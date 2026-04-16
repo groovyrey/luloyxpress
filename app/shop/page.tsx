@@ -66,12 +66,12 @@ function ProductCard({ product }: { product: ProductRow }) {
   return (
     <div className="group block h-full">
       <Link href={`/products/${product.id}`} className="cursor-pointer block">
-        <div className="relative mb-4 aspect-square overflow-hidden rounded-2xl bg-zinc-100">
+        <div className="relative mb-4 aspect-square overflow-hidden rounded-2xl bg-white">
           <Image
             src={product.image}
             alt={product.name}
             fill
-            className="object-cover object-center transition-transform duration-500 group-hover:scale-110"
+            className="object-contain object-center transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
           <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">

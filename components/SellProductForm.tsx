@@ -109,6 +109,20 @@ export default function SellProductForm({ action }: SellProductFormProps) {
       )}
 
       <div>
+        <label htmlFor="tags" className="block text-sm font-medium text-zinc-700 mb-1">
+          Tags
+        </label>
+        <input
+          type="text"
+          id="tags"
+          name="tags"
+          placeholder="#secondhand, #vintage, #limited"
+          className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+        />
+        <p className="mt-2 text-xs text-zinc-500">Enter comma-separated tags. Prefix will be added automatically if missing.</p>
+      </div>
+
+      <div>
         <label htmlFor="description" className="block text-sm font-medium text-zinc-700 mb-1">
           Description
         </label>

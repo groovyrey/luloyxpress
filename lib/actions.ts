@@ -158,12 +158,20 @@ export async function createProduct(formData: FormData) {
   const rawPrice = formData.get('price') as string;
   let category = formData.get('category') as string;
   const otherCategory = (formData.get('other_category') as string) || '';
+  const rawTags = (formData.get('tags') as string) || '';
   const description = formData.get('description') as string;
   const imageFile = formData.get('image') as File;
 
   if (category === 'Other') {
     category = otherCategory.trim();
   }
+
+  const tags = rawTags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => (tag.startsWith('#') ? tag : `#${tag}`))
+    .join(', ');
 
   if (!name || !rawPrice || !category || !description || !imageFile) {
     return { error: 'Missing fields' };
@@ -211,8 +219,8 @@ export async function createProduct(formData: FormData) {
     }
 
     await pool.query(
-      'INSERT INTO products (name, price, category, image, description, seller_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, price, category, imageUrl, description, session.user.id]
+      'INSERT INTO products (name, price, category, image, description, tags, seller_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, price, category, imageUrl, description, tags, session.user.id]
     );
 
     revalidatePath('/shop');

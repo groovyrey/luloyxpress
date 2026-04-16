@@ -14,6 +14,7 @@ interface ProductRow extends RowDataPacket {
   category: string;
   image: string;
   description: string;
+  tags?: string;
   seller_id: number;
   seller_name?: string;
   seller_email?: string;
@@ -60,12 +61,12 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
 
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
           {/* Product Image */}
-          <div className="aspect-square w-full overflow-hidden rounded-3xl bg-zinc-100 relative">
+          <div className="aspect-square w-full overflow-hidden rounded-3xl bg-white relative">
             <Image 
               src={product.image} 
               alt={product.name} 
               fill
-              className="object-cover"
+              className="object-contain"
               priority
             />
           </div>
@@ -93,6 +94,16 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
               ) : (
                 <div className="rounded-xl bg-zinc-50 border border-dashed border-zinc-200 p-6 text-center">
                   <p className="text-zinc-400 italic">No description provided for this listing.</p>
+                </div>
+              )}
+
+              {product.tags && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {product.tags.split(',').map((tag) => (
+                    <span key={tag} className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-600 border border-blue-100">
+                      {tag.trim()}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>

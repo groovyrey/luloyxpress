@@ -39,11 +39,11 @@ export default async function NewArrivalsPage() {
             {products.map((product) => (
               <div key={product.id} className="group block">
                 <Link href={`/products/${product.id}`} className="cursor-pointer">
-                  <div className="relative mb-4 aspect-square overflow-hidden rounded-2xl bg-zinc-100">
+                  <div className="relative mb-4 aspect-square overflow-hidden rounded-2xl bg-white">
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-110"
+                      className="h-full w-full object-contain object-center transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute top-4 left-4">
                       <span className="bg-black text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">New</span>

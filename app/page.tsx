@@ -92,7 +92,7 @@ export default async function Home() {
                       src={product.image}
                       alt={product.name}
                       fill
-                      className="object-cover object-center transition-transform duration-500 group-hover:scale-110"
+                      className="object-contain object-center transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute top-4 left-4">
                       <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Featured</span>
@@ -126,12 +126,12 @@ export default async function Home() {
           <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
             {recent.map((product) => (
               <Link key={product.id} href={`/products/${product.id}`} className="group cursor-pointer block">
-                <div className="relative mb-4 aspect-square overflow-hidden rounded-2xl bg-zinc-100">
+                <div className="relative mb-4 aspect-square overflow-hidden rounded-2xl bg-white">
                   <Image
                     src={product.image}
                     alt={product.name}
                     fill
-                    className="object-cover object-center transition-transform duration-500 group-hover:scale-110"
+                    className="object-contain object-center transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
                 <div>
