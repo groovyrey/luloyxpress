@@ -137,7 +137,7 @@ export default async function CartPage() {
                 <form action={async () => {
                   'use server';
                   const result = await checkout();
-                  if (result.success) {
+                  if (result.success && session?.user?.id) {
                     redirect(`/profile/${session.user.id}?checkout=success`);
                   }
                 }}>
