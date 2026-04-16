@@ -46,6 +46,7 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
   }
 
   const isSeller = session?.user?.id === product.seller_id?.toString();
+  const isVerifiedSeller = product.seller_tier?.toLowerCase() === 'pro';
 
   return (
     <div className="min-h-screen bg-white font-sans py-12">
@@ -112,7 +113,7 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
                     ) : (
                       <p className="font-bold text-zinc-900">{product.seller_name || "LuloyXpress Official"}</p>
                     )}
-                    {product.seller_tier === 'pro' && (
+                    {isVerifiedSeller && (
                       <span className="flex items-center gap-0.5 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600 uppercase border border-blue-100">
                         <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>

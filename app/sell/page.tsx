@@ -2,6 +2,11 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { createProduct } from "@/lib/actions";
 
+async function createProductAction(formData: FormData) {
+  'use server';
+  await createProduct(formData);
+}
+
 export default async function SellPage() {
   const session = await auth();
 
@@ -19,12 +24,7 @@ export default async function SellPage() {
           </div>
 
           <form 
-            action={async (formData) => {
-              const result = await createProduct(formData);
-              if (result?.error) {
-                alert(result.error);
-              }
-            }} 
+            action={createProductAction}
             className="space-y-6"
           >
             <div>

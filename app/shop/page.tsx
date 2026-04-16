@@ -61,6 +61,8 @@ async function getUniqueCategories() {
 }
 
 function ProductCard({ product }: { product: ProductRow }) {
+  const isVerifiedSeller = product.seller_tier?.toLowerCase() === 'pro';
+
   return (
     <div className="group block h-full">
       <Link href={`/products/${product.id}`} className="cursor-pointer block">
@@ -101,12 +103,12 @@ function ProductCard({ product }: { product: ProductRow }) {
                 <span className="text-zinc-600 font-medium">{product.seller_name}</span>
               )}
             </p>
-            {product.seller_tier === 'pro' && (
-              <span className="flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-[8px] font-black text-blue-600 uppercase border border-blue-100 flex-shrink-0">
+            {isVerifiedSeller && (
+              <span className="flex items-center gap-0.5 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-600 uppercase border border-blue-100 flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                 </svg>
-                PRO
+                Verified Seller
               </span>
             )}
           </div>

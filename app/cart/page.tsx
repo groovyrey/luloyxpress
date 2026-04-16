@@ -6,6 +6,18 @@ import { redirect } from "next/navigation";
 import { removeFromCart, checkout } from "@/lib/actions";
 import { RowDataPacket } from "mysql2";
 
+async function removeFromCartAction(formData: FormData) {
+  'use server';
+  const cartItemId = formData.get('cart_item_id');
+  if (!cartItemId) return;
+  await removeFromCart(Number(cartItemId));
+}
+
+async function checkoutAction(formData: FormData) {
+  'use server';
+  await checkout();
+}
+
 interface CartItemRow extends RowDataPacket {
   cart_item_id: number;
   id: number;
@@ -90,10 +102,8 @@ export default async function CartPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <p className="font-bold text-blue-600">{item.price} x {item.quantity}</p>
-                      <form action={async () => {
-                        'use server';
-                        await removeFromCart(item.cart_item_id);
-                      }}>
+                      <form action={removeFromCartAction}>
+                        <input type="hidden" name="cart_item_id" value={item.cart_item_id} />
                         <button className="text-xs font-bold text-red-600 hover:text-red-700 uppercase tracking-wider">
                           Remove
                         </button>
@@ -135,17 +145,7 @@ export default async function CartPage() {
 
               {cartItems.length > 0 && (
                 <form 
-                  action={async () => {
-                    'use server';
-                    const result = await checkout();
-                    if (result.success && session?.user?.id) {
-                      redirect(`/profile/${session.user.id}?checkout=success`);
-                    } else if (result.error) {
-                      // We can't use alert in a server component action directly like this if it's purely server-side,
-                      // but in Next.js 15, these functions are converted to client-callable actions.
-                      // For better UX, normally we'd use useActionState, but this should fix the type error.
-                    }
-                  }}
+                  action={checkoutAction}
                 >
                   <button 
                     disabled={parseFloat(balance) < total}
