@@ -1,21 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, type ChangeEvent, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { createProduct } from "@/lib/actions";
 
-type CreateProductAction = (formData: FormData) => Promise<void>;
-
-interface SellProductFormProps {
-  action: CreateProductAction;
-}
-
-export default function SellProductForm({ action }: SellProductFormProps) {
+export default function SellProductForm() {
   const [category, setCategory] = useState("Men's Apparel");
   const [otherCategory, setOtherCategory] = useState("");
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const showOtherCategoryInput = category === "Other";
+  const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) {
+      setFileError(null);
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError('File is too large. Please upload an image smaller than 4MB.');
+      return;
+    }
+
+    setFileError(null);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (fileError) {
+      return;
+    }
+
+    setSubmitError(null);
+    const formData = new FormData(event.currentTarget);
+    const result = await createProduct(formData);
+
+    if (result?.error) {
+      setSubmitError(result.error);
+      return;
+    }
+
+    startTransition(() => {
+      router.push('/shop');
+    });
+  };
 
   return (
-    <form action={action} className="space-y-6">
+    <form encType="multipart/form-data" onSubmit={handleSubmit} className="space-y-6">
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-1">
           Product Name
@@ -146,17 +182,26 @@ export default function SellProductForm({ action }: SellProductFormProps) {
           name="image"
           accept="image/*"
           required
+          onChange={handleFileChange}
           className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         />
         <p className="mt-2 text-xs text-zinc-500 italic">Upload a clear photo of your product.</p>
+        {fileError && <p className="mt-2 text-xs font-semibold text-red-600">{fileError}</p>}
       </div>
+
+      {submitError && (
+        <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm font-medium text-red-700">
+          {submitError}
+        </div>
+      )}
 
       <div className="pt-4">
         <button
           type="submit"
-          className="w-full rounded-full bg-blue-600 px-6 py-4 text-sm font-bold text-white transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          disabled={isPending || Boolean(fileError)}
+          className="w-full rounded-full bg-blue-600 px-6 py-4 text-sm font-bold text-white transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          List Product for Sale
+          {isPending ? 'Listing product...' : 'List Product for Sale'}
         </button>
       </div>
     </form>

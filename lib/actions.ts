@@ -231,7 +231,7 @@ export async function createProduct(formData: FormData) {
     return { error: 'Failed to create product' };
   }
 
-  redirect('/shop');
+  return { success: true };
 }
 
 export async function deleteProduct(productId: number) {

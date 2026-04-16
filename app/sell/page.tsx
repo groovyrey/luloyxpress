@@ -1,12 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { createProduct } from "@/lib/actions";
 import SellProductForm from "@/components/SellProductForm";
-
-async function createProductAction(formData: FormData) {
-  'use server';
-  await createProduct(formData);
-}
 
 export default async function SellPage() {
   const session = await auth();
@@ -24,7 +18,7 @@ export default async function SellPage() {
             <p className="mt-2 text-zinc-600">List your item for sale on LuloyXpress.</p>
           </div>
 
-          <SellProductForm action={createProductAction} />
+          <SellProductForm />
         </div>
       </div>
     </div>
