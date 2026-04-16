@@ -42,6 +42,7 @@ async function setupDatabase() {
         category VARCHAR(100),
         image TEXT,
         description TEXT,
+        tags TEXT,
         seller_id INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (seller_id) REFERENCES users(id)

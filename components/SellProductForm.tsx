@@ -119,6 +119,9 @@ export default function SellProductForm() {
             <optgroup label="Food">
               <option value="Food">Food</option>
             </optgroup>
+            <optgroup label="Automotive">
+              <option value="Automotive">Automotive</option>
+            </optgroup>
             <optgroup label="Other">
               <option value="Other">Other</option>
             </optgroup>
