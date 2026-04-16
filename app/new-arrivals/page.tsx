@@ -35,7 +35,7 @@ export default async function NewArrivalsPage() {
             <p className="mt-2 text-zinc-500">Check back later for fresh listings!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-12">
             {products.map((product) => (
               <div key={product.id} className="group block">
                 <Link href={`/products/${product.id}`} className="cursor-pointer">
@@ -58,7 +58,7 @@ export default async function NewArrivalsPage() {
                     <Link href={`/products/${product.id}`} className="hover:text-blue-600 transition-colors">
                       <div>
                         <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{product.category}</p>
-                        <h3 className="mt-1 text-base font-semibold text-black">{product.name}</h3>
+                        <h3 className="mt-1 text-base font-semibold text-black truncate">{product.name}</h3>
                       </div>
                     </Link>
                     <p className="text-sm font-bold text-blue-600">{product.price}</p>

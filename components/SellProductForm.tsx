@@ -3,10 +3,15 @@
 import { useState, useTransition, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct } from "@/lib/actions";
+import { validatePrice, formatPrice, parsePrice } from "@/lib/currency";
 
 export default function SellProductForm() {
   const [category, setCategory] = useState("Men's Apparel");
   const [otherCategory, setOtherCategory] = useState("");
+  const [tags, setTags] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [priceError, setPriceError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -14,6 +19,26 @@ export default function SellProductForm() {
 
   const showOtherCategoryInput = category === "Other";
   const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+
+  const handlePriceChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setPrice(value);
+    
+    if (!value.trim()) {
+      setPriceError("Price is required");
+      return;
+    }
+    
+    const validation = validatePrice(value, { min: 1, max: 10000000 });
+    setPriceError(validation.error || null);
+  };
+
+  const getPricePreview = (): string | null => {
+    if (!price) return null;
+    const parsed = parsePrice(price);
+    if (parsed <= 0) return null;
+    return formatPrice(parsed);
+  };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -32,12 +57,18 @@ export default function SellProductForm() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (fileError) {
+    
+    if (fileError || priceError) {
       return;
     }
 
     setSubmitError(null);
     const formData = new FormData(event.currentTarget);
+    
+    // Normalize and format the price before submission
+    const normalizedPrice = formatPrice(price);
+    formData.set('price', normalizedPrice);
+    
     const result = await createProduct(formData);
 
     if (result?.error) {
@@ -56,11 +87,16 @@ export default function SellProductForm() {
         <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-1">
           Product Name
         </label>
+        <div className="flex items-center justify-between mb-2">
+          <span></span>
+          <span className="text-xs text-zinc-500">0/100</span>
+        </div>
         <input
           type="text"
           id="name"
           name="name"
           required
+          maxLength={100}
           placeholder="e.g., Vintage Camera"
           className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         />
@@ -71,17 +107,30 @@ export default function SellProductForm() {
           <label htmlFor="price" className="block text-sm font-medium text-zinc-700 mb-1">
             Price (Pesos)
           </label>
-          <div className="relative">
+          <div className="relative mb-2">
             <span className="absolute left-4 top-3 text-zinc-500 font-medium">₱</span>
             <input
               type="text"
               id="price"
               name="price"
+              value={price}
+              onChange={handlePriceChange}
               required
-              placeholder="1,500.00"
-              className="block w-full rounded-lg border border-zinc-300 pl-8 pr-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              maxLength={16}
+              placeholder="1500 or 1,500.00"
+              className={`block w-full rounded-lg border px-4 py-3 pl-8 text-zinc-900 focus:ring-blue-500 focus:outline-none sm:text-sm transition-colors ${
+                priceError
+                  ? 'border-red-300 focus:border-red-500'
+                  : 'border-zinc-300 focus:border-blue-500'
+              }`}
             />
           </div>
+          {priceError && (
+            <p className="text-xs font-semibold text-red-600 mb-1">{priceError}</p>
+          )}
+          {getPricePreview() && !priceError && (
+            <p className="text-xs text-green-600 font-medium">Preview: {getPricePreview()}</p>
+          )}
         </div>
 
         <div>
@@ -141,9 +190,11 @@ export default function SellProductForm() {
             value={otherCategory}
             onChange={(event) => setOtherCategory(event.target.value)}
             required={showOtherCategoryInput}
+            maxLength={50}
             placeholder="e.g., Art Collectibles"
             className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
+          <p className="mt-1 text-xs text-zinc-500">{otherCategory.length}/50</p>
         </div>
       )}
 
@@ -151,10 +202,17 @@ export default function SellProductForm() {
         <label htmlFor="tags" className="block text-sm font-medium text-zinc-700 mb-1">
           Tags
         </label>
+        <div className="flex items-center justify-between mb-2">
+          <span></span>
+          <span className="text-xs text-zinc-500">{tags.length}/200</span>
+        </div>
         <input
           type="text"
           id="tags"
           name="tags"
+          value={tags}
+          onChange={(event) => setTags(event.target.value)}
+          maxLength={200}
           placeholder="#secondhand, #vintage, #limited"
           className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         />
@@ -165,11 +223,18 @@ export default function SellProductForm() {
         <label htmlFor="description" className="block text-sm font-medium text-zinc-700 mb-1">
           Description
         </label>
+        <div className="flex items-center justify-between mb-2">
+          <span></span>
+          <span className="text-xs text-zinc-500">{description.length}/2000</span>
+        </div>
         <textarea
           id="description"
           name="description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
           rows={4}
           required
+          maxLength={2000}
           placeholder="Describe your product in detail..."
           className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         ></textarea>
@@ -201,7 +266,7 @@ export default function SellProductForm() {
       <div className="pt-4">
         <button
           type="submit"
-          disabled={isPending || Boolean(fileError)}
+          disabled={isPending || Boolean(fileError) || Boolean(priceError)}
           className="w-full rounded-full bg-blue-600 px-6 py-4 text-sm font-bold text-white transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? 'Listing product...' : 'List Product for Sale'}

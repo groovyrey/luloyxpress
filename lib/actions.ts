@@ -241,9 +241,9 @@ export async function deleteProduct(productId: number) {
   }
 
   try {
-    // Check if the product belongs to the user
+    // Check if the product belongs to the user and get image URL
     const [rows] = await pool.query<ProductRow[]>(
-      'SELECT seller_id FROM products WHERE id = ?',
+      'SELECT seller_id, image FROM products WHERE id = ?',
       [productId]
     );
 
@@ -253,6 +253,21 @@ export async function deleteProduct(productId: number) {
 
     if (rows[0].seller_id !== parseInt(session.user.id)) {
       return { error: 'Unauthorized' };
+    }
+
+    const imageUrl = rows[0].image;
+
+    // Delete image from Cloudinary if it exists
+    if (imageUrl && imageUrl.includes('cloudinary.com')) {
+      try {
+        const publicId = imageUrl.split('/').pop()?.split('.')[0];
+        if (publicId) {
+          await cloudinary.uploader.destroy(`product_thumbnails/${publicId}`);
+        }
+      } catch (cloudinaryError) {
+        console.error('Error deleting image from Cloudinary:', cloudinaryError);
+        // Continue with product deletion even if image deletion fails
+      }
     }
 
     // First delete from cart_items to avoid foreign key issues

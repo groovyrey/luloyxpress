@@ -84,7 +84,7 @@ export default async function Home() {
               <h2 className="text-3xl font-bold tracking-tight text-black mt-2">Premium Picks</h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-12">
               {featured.map((product) => (
                 <Link key={product.id} href={`/products/${product.id}`} className="group cursor-pointer block">
                   <div className="relative mb-4 aspect-square overflow-hidden rounded-3xl bg-white shadow-sm border border-zinc-100">
@@ -93,6 +93,7 @@ export default async function Home() {
                       alt={product.name}
                       fill
                       className="object-contain object-center transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
                     />
                     <div className="absolute top-4 left-4">
                       <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Featured</span>
@@ -100,7 +101,7 @@ export default async function Home() {
                   </div>
                   <div>
                     <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{product.category}</p>
-                    <h3 className="mt-1 text-base font-semibold text-black">{product.name}</h3>
+                    <h3 className="mt-1 text-base font-semibold text-black truncate">{product.name}</h3>
                     <p className="mt-1 text-sm font-bold text-blue-600">{product.price}</p>
                   </div>
                 </Link>
@@ -123,7 +124,7 @@ export default async function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-12">
             {recent.map((product) => (
               <Link key={product.id} href={`/products/${product.id}`} className="group cursor-pointer block">
                 <div className="relative mb-4 aspect-square overflow-hidden rounded-2xl bg-white">
@@ -132,16 +133,13 @@ export default async function Home() {
                     alt={product.name}
                     fill
                     className="object-contain object-center transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
                   />
                 </div>
                 <div>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{product.category}</p>
-                      <h3 className="mt-1 text-base font-semibold text-black">{product.name}</h3>
-                    </div>
-                    <p className="text-sm font-bold text-blue-600">{product.price}</p>
-                  </div>
+                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{product.category}</p>
+                  <h3 className="mt-1 text-base font-semibold text-black truncate">{product.name}</h3>
+                  <p className="mt-2 text-sm font-bold text-blue-600">{product.price}</p>
                 </div>
               </Link>
             ))}

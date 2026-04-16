@@ -72,7 +72,7 @@ function ProductCard({ product }: { product: ProductRow }) {
             alt={product.name}
             fill
             className="object-contain object-center transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
           />
           <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="rounded-xl bg-white/90 px-6 py-3 text-sm font-bold text-black backdrop-blur-sm shadow-xl">
@@ -224,7 +224,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-1"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                     </Link>
                   </div>
-                  <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-12">
                     {products.slice(0, 4).map((product) => (
                       <ProductCard key={product.id} product={product} />
                     ))}
@@ -232,7 +232,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
                 </section>
               ))
             ) : (
-              <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-12">
                 {allProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
