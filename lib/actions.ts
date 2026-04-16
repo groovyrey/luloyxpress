@@ -156,9 +156,18 @@ export async function loginAction(formData: FormData): Promise<void> {
 export async function createProduct(formData: FormData) {
   const name = formData.get('name') as string;
   const rawPrice = formData.get('price') as string;
-  const category = formData.get('category') as string;
+  let category = formData.get('category') as string;
+  const otherCategory = (formData.get('other_category') as string) || '';
   const description = formData.get('description') as string;
   const imageFile = formData.get('image') as File;
+
+  if (category === 'Other') {
+    category = otherCategory.trim();
+  }
+
+  if (!name || !rawPrice || !category || !description || !imageFile) {
+    return { error: 'Missing fields' };
+  }
 
   const session = await auth();
   if (!session || !session.user?.id) {
