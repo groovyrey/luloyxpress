@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import cloudinary from '@/lib/cloudinary';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { validatePrice } from '@/lib/currency';
 
 interface UserRow extends RowDataPacket {
   id: number;
@@ -185,6 +186,12 @@ export async function createProduct(formData: FormData) {
   // Ensure price starts with ₱
   const price = rawPrice.startsWith('₱') ? rawPrice : `₱${rawPrice}`;
 
+  // Server-side price validation
+  const priceValidation = validatePrice(price, { min: 1, max: 10000000 });
+  if (!priceValidation.isValid) {
+    return { error: priceValidation.error };
+  }
+
   try {
     let imageUrl = '';
 
@@ -320,11 +327,27 @@ export async function addToCart(productId: number) {
       );
     }
 
-    revalidatePath('/cart');
+    revalidatePath('/', 'layout');
     return { success: true };
   } catch (error) {
     console.error('Error adding to cart:', error);
     return { error: 'Failed to add to cart' };
+  }
+}
+
+export async function getCartCount(): Promise<number> {
+  const session = await auth();
+  if (!session || !session.user?.id) return 0;
+
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT SUM(quantity) as count FROM cart_items WHERE user_id = ?',
+      [session.user.id]
+    );
+    return Number(rows[0]?.count || 0);
+  } catch (error) {
+    console.error('Error getting cart count:', error);
+    return 0;
   }
 }
 
@@ -336,7 +359,7 @@ export async function removeFromCart(cartItemId: number) {
 
   try {
     await pool.query('DELETE FROM cart_items WHERE id = ? AND user_id = ?', [cartItemId, session.user.id]);
-    revalidatePath('/cart');
+    revalidatePath('/', 'layout');
     return { success: true };
   } catch {
     return { error: 'Failed to remove from cart' };
@@ -409,7 +432,7 @@ export async function checkout() {
 
     await connection.commit();
     
-    revalidatePath('/cart');
+    revalidatePath('/', 'layout');
     revalidatePath(`/profile/${session.user.id}`);
     revalidatePath('/shop');
 

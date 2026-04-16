@@ -104,9 +104,14 @@ export default function SellProductForm() {
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
-          <label htmlFor="price" className="block text-sm font-medium text-zinc-700 mb-1">
-            Price (Pesos)
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="price" className="block text-sm font-medium text-zinc-700">
+              Price (Pesos)
+            </label>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+              Limit: ₱1 - ₱10M
+            </span>
+          </div>
           <div className="relative mb-2">
             <span className="absolute left-4 top-3 text-zinc-500 font-medium">₱</span>
             <input
