@@ -28,7 +28,15 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-        <form action={loginAction} className="mt-8 space-y-6">
+        <form 
+          action={async (formData) => {
+            const result = await loginAction(formData);
+            if (result?.error) {
+              alert(result.error);
+            }
+          }} 
+          className="mt-8 space-y-6"
+        >
           <div className="space-y-4 rounded-md shadow-sm">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-zinc-700">

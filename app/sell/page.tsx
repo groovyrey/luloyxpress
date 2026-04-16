@@ -18,7 +18,15 @@ export default async function SellPage() {
             <p className="mt-2 text-zinc-600">List your item for sale on LuloyXpress.</p>
           </div>
 
-          <form action={createProduct} className="space-y-6">
+          <form 
+            action={async (formData) => {
+              const result = await createProduct(formData);
+              if (result?.error) {
+                alert(result.error);
+              }
+            }} 
+            className="space-y-6"
+          >
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-1">
                 Product Name

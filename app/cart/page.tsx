@@ -134,13 +134,19 @@ export default async function CartPage() {
               </div>
 
               {cartItems.length > 0 && (
-                <form action={async () => {
-                  'use server';
-                  const result = await checkout();
-                  if (result.success && session?.user?.id) {
-                    redirect(`/profile/${session.user.id}?checkout=success`);
-                  }
-                }}>
+                <form 
+                  action={async () => {
+                    'use server';
+                    const result = await checkout();
+                    if (result.success && session?.user?.id) {
+                      redirect(`/profile/${session.user.id}?checkout=success`);
+                    } else if (result.error) {
+                      // We can't use alert in a server component action directly like this if it's purely server-side,
+                      // but in Next.js 15, these functions are converted to client-callable actions.
+                      // For better UX, normally we'd use useActionState, but this should fix the type error.
+                    }
+                  }}
+                >
                   <button 
                     disabled={parseFloat(balance) < total}
                     className="w-full rounded-full bg-black py-4 text-base font-bold text-white transition-all hover:bg-zinc-800 shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
