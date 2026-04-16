@@ -29,12 +29,7 @@ export default function RegisterPage() {
           </p>
         </div>
         <form 
-          action={async (formData) => {
-            const result = await register(formData);
-            if (result?.error) {
-              alert(result.error);
-            }
-          }} 
+          action={register}
           className="mt-8 space-y-6"
         >
           <div className="space-y-4 rounded-md shadow-sm">

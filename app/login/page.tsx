@@ -29,12 +29,7 @@ export default function LoginPage() {
           </p>
         </div>
         <form 
-          action={async (formData) => {
-            const result = await loginAction(formData);
-            if (result?.error) {
-              alert(result.error);
-            }
-          }} 
+          action={loginAction}
           className="mt-8 space-y-6"
         >
           <div className="space-y-4 rounded-md shadow-sm">

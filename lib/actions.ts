@@ -42,13 +42,13 @@ interface CloudinaryUploadResult {
   secure_url: string;
 }
 
-export async function register(formData: FormData) {
+export async function register(formData: FormData): Promise<void> {
   const name = formData.get('name') as string;
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
   if (!name || !email || !password) {
-    return { error: 'Missing fields' };
+    return;
   }
 
   try {
@@ -57,18 +57,16 @@ export async function register(formData: FormData) {
     // Check if user exists
     const [existing] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [email]);
     if (existing.length > 0) {
-      return { error: 'User already exists' };
+      return;
     }
 
     await pool.query(
       'INSERT INTO users (name, email, password, account_type) VALUES (?, ?, ?, ?)',
       [name, email, hashedPassword, 'standard']
     );
-
-    return { success: true };
   } catch (error) {
     console.error('Registration error:', error);
-    return { error: 'Something went wrong during registration' };
+    return;
   }
 }
 
@@ -135,7 +133,7 @@ export async function updateMembership(formData: FormData) {
   }
 }
 
-export async function loginAction(formData: FormData) {
+export async function loginAction(formData: FormData): Promise<void> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
@@ -147,12 +145,9 @@ export async function loginAction(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      switch (error.type) {
-        case 'CredentialsSignin':
-          return { error: 'Invalid credentials' };
-        default:
-          return { error: 'Something went wrong' };
-      }
+      // In this flow we don't return an error object, because form actions
+      // must resolve to void. Client-side error reporting can be added later.
+      return;
     }
     throw error;
   }

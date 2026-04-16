@@ -8,6 +8,8 @@ import { signOut } from "next-auth/react";
 
 export default function NavbarClient({ session }: { session: Session | null }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const userId = session?.user?.id;
+  const userName = session?.user?.name;
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
@@ -60,10 +62,10 @@ export default function NavbarClient({ session }: { session: Session | null }) {
 
             {/* Auth Button Desktop */}
             <div className="hidden md:block">
-              {session ? (
+              {userId ? (
                 <div className="flex items-center gap-4 border-l border-zinc-200 pl-4">
-                  <Link href={`/profile/${session.user.id}`} className="text-sm font-medium text-zinc-600 hover:text-black transition-colors">
-                    Hi, {session.user?.name?.split(' ')[0]}
+                  <Link href={`/profile/${userId}`} className="text-sm font-medium text-zinc-600 hover:text-black transition-colors">
+                    Hi, {userName?.split(' ')[0]}
                   </Link>
                   <button 
                     onClick={() => signOut({ callbackUrl: "/" })}
@@ -105,11 +107,11 @@ export default function NavbarClient({ session }: { session: Session | null }) {
             <Link href="/sell" onClick={() => setIsMenuOpen(false)} className="hover:text-black px-2 py-1 font-semibold text-blue-600">Sell</Link>
           </div>
           <div className="pt-4 border-t border-zinc-100">
-            {session ? (
+            {userId ? (
               <div className="space-y-4 px-2">
-                <div className="text-sm text-zinc-500 font-medium">Signed in as <span className="text-black">{session.user?.name}</span></div>
+                <div className="text-sm text-zinc-500 font-medium">Signed in as <span className="text-black">{userName}</span></div>
                 <div className="flex flex-col gap-3">
-                  <Link href={`/profile/${session.user.id}`} onClick={() => setIsMenuOpen(false)} className="text-sm font-bold text-black">My Profile</Link>
+                  <Link href={`/profile/${userId}`} onClick={() => setIsMenuOpen(false)} className="text-sm font-bold text-black">My Profile</Link>
                   <button 
                     onClick={() => signOut({ callbackUrl: "/" })}
                     className="text-sm font-bold text-red-600 text-left"
