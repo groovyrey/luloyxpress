@@ -2,15 +2,37 @@
 
 import { useState, useTransition, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createProduct } from "@/lib/actions";
+import { updateProduct } from "@/lib/actions";
 import { validatePrice, formatPrice, parsePrice } from "@/lib/currency";
 
-export default function SellProductForm() {
-  const [category, setCategory] = useState("Men's Apparel");
-  const [otherCategory, setOtherCategory] = useState("");
-  const [tags, setTags] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
+interface Product {
+  id: number;
+  name: string;
+  price: string;
+  category: string;
+  image: string;
+  description: string;
+  tags?: string;
+}
+
+const CATEGORIES = [
+  { group: "Fashion", options: ["Men's Apparel", "Women's Apparel", "Footwear", "Jewelry & Accessories", "Bags & Wallets"] },
+  { group: "Electronics", options: ["Smartphones & Tablets", "Computers & Laptops", "Audio & Headphones", "Cameras & Photography", "Gadgets & Wearables"] },
+  { group: "Home & Living", options: ["Furniture", "Kitchenware", "Home Decor", "Appliances", "Garden & Outdoor"] },
+  { group: "Food", options: ["Food"] },
+  { group: "Automotive", options: ["Automotive"] },
+  { group: "Other", options: ["Other"] }
+];
+
+export default function EditProductForm({ product }: { product: Product }) {
+  const isCustomCategory = !CATEGORIES.flatMap(c => c.options).includes(product.category);
+  
+  const [name, setName] = useState(product.name || "");
+  const [category, setCategory] = useState(isCustomCategory ? "Other" : product.category);
+  const [otherCategory, setOtherCategory] = useState(isCustomCategory ? product.category : "");
+  const [tags, setTags] = useState(product.tags || "");
+  const [description, setDescription] = useState(product.description || "");
+  const [price, setPrice] = useState(product.price.replace(/[^\d.,]/g, ''));
   const [priceError, setPriceError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -69,7 +91,7 @@ export default function SellProductForm() {
     const normalizedPrice = formatPrice(price);
     formData.set('price', normalizedPrice);
     
-    const result = await createProduct(formData);
+    const result = await updateProduct(product.id, formData);
 
     if (result?.error) {
       setSubmitError(result.error);
@@ -77,7 +99,7 @@ export default function SellProductForm() {
     }
 
     startTransition(() => {
-      router.push('/shop');
+      router.push(`/products/${product.id}`);
     });
   };
 
@@ -89,12 +111,14 @@ export default function SellProductForm() {
         </label>
         <div className="flex items-center justify-between mb-2">
           <span></span>
-          <span className="text-xs text-zinc-500">0/100</span>
+          <span className="text-xs text-zinc-500">{name.length}/100</span>
         </div>
         <input
           type="text"
           id="name"
           name="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           required
           maxLength={100}
           placeholder="e.g., Vintage Camera"
@@ -149,36 +173,13 @@ export default function SellProductForm() {
             onChange={(event) => setCategory(event.target.value)}
             className="block w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           >
-            <optgroup label="Fashion">
-              <option value="Men&apos;s Apparel">Men&apos;s Apparel</option>
-              <option value="Women&apos;s Apparel">Women&apos;s Apparel</option>
-              <option value="Footwear">Footwear</option>
-              <option value="Jewelry & Accessories">Jewelry & Accessories</option>
-              <option value="Bags & Wallets">Bags & Wallets</option>
-            </optgroup>
-            <optgroup label="Electronics">
-              <option value="Smartphones & Tablets">Smartphones & Tablets</option>
-              <option value="Computers & Laptops">Computers & Laptops</option>
-              <option value="Audio & Headphones">Audio & Headphones</option>
-              <option value="Cameras & Photography">Cameras & Photography</option>
-              <option value="Gadgets & Wearables">Gadgets & Wearables</option>
-            </optgroup>
-            <optgroup label="Home & Living">
-              <option value="Furniture">Furniture</option>
-              <option value="Kitchenware">Kitchenware</option>
-              <option value="Home Decor">Home Decor</option>
-              <option value="Appliances">Appliances</option>
-              <option value="Garden & Outdoor">Garden & Outdoor</option>
-            </optgroup>
-            <optgroup label="Food">
-              <option value="Food">Food</option>
-            </optgroup>
-            <optgroup label="Automotive">
-              <option value="Automotive">Automotive</option>
-            </optgroup>
-            <optgroup label="Other">
-              <option value="Other">Other</option>
-            </optgroup>
+            {CATEGORIES.map(group => (
+              <optgroup key={group.group} label={group.group}>
+                {group.options.map(opt => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </optgroup>
+            ))}
           </select>
         </div>
       </div>
@@ -221,7 +222,7 @@ export default function SellProductForm() {
           placeholder="#secondhand, #vintage, #limited"
           className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         />
-        <p className="mt-2 text-xs text-zinc-500">Enter comma-separated tags. Prefix will be added automatically if missing.</p>
+        <p className="mt-2 text-xs text-zinc-500">Enter comma-separated tags.</p>
       </div>
 
       <div>
@@ -247,18 +248,17 @@ export default function SellProductForm() {
 
       <div>
         <label htmlFor="image" className="block text-sm font-medium text-zinc-700 mb-1">
-          Product Image
+          Product Image (Optional - Keep current image if blank)
         </label>
         <input
           type="file"
           id="image"
           name="image"
           accept="image/*"
-          required
           onChange={handleFileChange}
           className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         />
-        <p className="mt-2 text-xs text-zinc-500 italic">Upload a clear photo of your product.</p>
+        <p className="mt-2 text-xs text-zinc-500 italic">Upload a new photo only if you want to replace the current one.</p>
         {fileError && <p className="mt-2 text-xs font-semibold text-red-600">{fileError}</p>}
       </div>
 
@@ -268,13 +268,20 @@ export default function SellProductForm() {
         </div>
       )}
 
-      <div className="pt-4">
+      <div className="pt-4 flex gap-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex-1 rounded-full border border-zinc-300 bg-white px-6 py-4 text-sm font-bold text-zinc-700 transition-all hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+        >
+          Cancel
+        </button>
         <button
           type="submit"
           disabled={isPending || Boolean(fileError) || Boolean(priceError)}
-          className="w-full rounded-full bg-blue-600 px-6 py-4 text-sm font-bold text-white transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 rounded-full bg-blue-600 px-6 py-4 text-sm font-bold text-white transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isPending ? 'Listing product...' : 'List Product for Sale'}
+          {isPending ? 'Updating...' : 'Update Product'}
         </button>
       </div>
     </form>

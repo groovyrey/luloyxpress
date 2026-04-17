@@ -92,6 +92,21 @@ async function setupDatabase() {
       )
     `);
 
+    // Create transactions table
+    console.log('Creating transactions table...');
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT,
+        type ENUM('deposit', 'purchase', 'sale', 'membership_fee', 'withdrawal') NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        description VARCHAR(255),
+        reference_id INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+
     console.log('Database setup complete successfully!');
     await connection.end();
   } catch (error) {

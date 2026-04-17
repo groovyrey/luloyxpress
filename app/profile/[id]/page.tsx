@@ -52,6 +52,15 @@ interface SaleItemRow extends RowDataPacket {
   created_at: Date;
 }
 
+interface WalletTransactionRow extends RowDataPacket {
+  id: number;
+  type: 'deposit' | 'purchase' | 'sale' | 'membership_fee' | 'withdrawal';
+  amount: string;
+  description: string;
+  reference_id: number | null;
+  created_at: Date;
+}
+
 async function getUserProducts(userId: string) {
   try {
     const [rows] = await pool.query<ProductRow[]>(
@@ -145,6 +154,22 @@ async function getRecentSales(userId: string) {
   }
 }
 
+async function getUserWalletTransactions(userId: string) {
+  try {
+    const [rows] = await pool.query<WalletTransactionRow[]>(
+      `SELECT * FROM transactions 
+       WHERE user_id = ? 
+       ORDER BY created_at DESC 
+       LIMIT 10`,
+      [userId]
+    );
+    return rows;
+  } catch (error) {
+    console.error("Error fetching wallet transactions:", error);
+    return [];
+  }
+}
+
 
 function CheckoutSuccessMessage() {
   return (
@@ -183,6 +208,7 @@ export default async function ProfilePage({
   const allOrderItems = await getOrderItems(orderIds);
   const sellerStats = isOwnProfile ? await getSellerStats(id) : null;
   const recentSales = isOwnProfile ? await getRecentSales(id) : [];
+  const walletTransactions = isOwnProfile ? await getUserWalletTransactions(id) : [];
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -286,6 +312,60 @@ export default async function ProfilePage({
             </section>
           )}
 
+          {/* Wallet Transaction History section for own profile */}
+          {isOwnProfile && (
+            <section className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100">
+              <h2 className="text-xl font-bold text-zinc-900 mb-6">Transaction Process</h2>
+              {walletTransactions.length === 0 ? (
+                <div className="text-center py-6 border-2 border-dashed border-zinc-100 rounded-xl">
+                  <p className="text-zinc-500">No transactions recorded yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-zinc-100">
+                  <table className="min-w-full divide-y divide-zinc-100">
+                    <thead className="bg-zinc-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Type</th>
+                        <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Description</th>
+                        <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</th>
+                        <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-zinc-100">
+                      {walletTransactions.map((tx) => (
+                        <tr key={tx.id} className="hover:bg-zinc-50/50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              tx.type === 'deposit' || tx.type === 'sale' 
+                                ? 'bg-green-50 text-green-600' 
+                                : 'bg-red-50 text-red-600'
+                            }`}>
+                              {tx.type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-medium text-zinc-700">{tx.description}</p>
+                            {tx.reference_id && <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">Ref: #{tx.reference_id}</p>}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <p className={`text-sm font-bold ${
+                              tx.type === 'deposit' || tx.type === 'sale' ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {tx.type === 'deposit' || tx.type === 'sale' ? '+' : '-'} ₱{parseFloat(tx.amount).toLocaleString()}
+                            </p>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-xs text-zinc-500 font-medium">
+                            {new Date(tx.created_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Transactions section for own profile */}
           {isOwnProfile && (
             <section className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100">
@@ -310,7 +390,7 @@ export default async function ProfilePage({
                           </span>
                         </div>
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-3 mb-4">
                         {allOrderItems
                           .filter(item => item.order_id === t.order_id)
                           .map((item, idx) => (
@@ -324,6 +404,11 @@ export default async function ProfilePage({
                               <p className="text-zinc-500 italic">₱{parseFloat(item.price).toLocaleString()} / unit</p>
                             </div>
                           ))}
+                      </div>
+                      <div className="flex gap-3 pt-4 border-t border-zinc-100">
+                        <Link href={`/receipt/${t.order_id}`} className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold py-2.5 px-4 rounded-xl text-center hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl">
+                          View Official Receipt
+                        </Link>
                       </div>
                     </div>
                   ))}

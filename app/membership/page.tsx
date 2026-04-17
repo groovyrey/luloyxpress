@@ -2,12 +2,18 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import pool from "@/lib/db";
 import MembershipButton from "@/components/MembershipButton";
+import { RowDataPacket } from "mysql2";
+
+interface UserRow extends RowDataPacket {
+  id: number;
+  account_type: string;
+}
 
 async function getFullUser(userId: string) {
   try {
-    const [rows]: any = await pool.query("SELECT * FROM users WHERE id = ?", [userId]);
+    const [rows] = await pool.query<UserRow[]>("SELECT * FROM users WHERE id = ?", [userId]);
     return rows[0];
-  } catch (error) {
+  } catch {
     return null;
   }
 }

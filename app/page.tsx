@@ -26,23 +26,15 @@ async function getProducts() {
       LIMIT 4
     `);
 
-    const [recent] = await pool.query<ProductRow[]>(`
-      SELECT p.*, u.account_type as seller_tier
-      FROM products p 
-      LEFT JOIN users u ON p.seller_id = u.id 
-      ORDER BY p.created_at DESC 
-      LIMIT 8
-    `);
-
-    return { featured, recent };
+    return { featured };
   } catch (error) {
     console.error('Database query error:', error);
-    return { featured: [], recent: [] };
+    return { featured: [] };
   }
 }
 
 export default async function Home() {
-  const { featured, recent } = await getProducts();
+  const { featured } = await getProducts();
 
   return (
     <main className="bg-white">
@@ -99,10 +91,12 @@ export default async function Home() {
                       <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Featured</span>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{product.category}</p>
-                    <h3 className="mt-1 text-base font-semibold text-black truncate">{product.name}</h3>
-                    <p className="mt-1 text-sm font-bold text-blue-600">{product.price}</p>
+                  <div className="flex justify-between items-start gap-2 overflow-hidden">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{product.category}</p>
+                      <h3 className="mt-1 text-base font-semibold text-black truncate">{product.name}</h3>
+                    </div>
+                    <p className="mt-1 text-sm font-bold text-blue-600 whitespace-nowrap">{product.price}</p>
                   </div>
                 </Link>
               ))}
@@ -110,42 +104,6 @@ export default async function Home() {
           </div>
         </section>
       )}
-
-      {/* Recent Products */}
-      <section className="py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 flex items-end justify-between">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight text-black">Recently Listed</h2>
-              <p className="mt-2 text-zinc-600">New arrivals from our community.</p>
-            </div>
-            <Link href="/shop" className="hidden text-sm font-semibold text-blue-600 hover:text-blue-700 sm:block">
-              View all &rarr;
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-12">
-            {recent.map((product) => (
-              <Link key={product.id} href={`/products/${product.id}`} className="group cursor-pointer block">
-                <div className="relative mb-4 aspect-square overflow-hidden rounded-2xl bg-white">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-contain object-center transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
-                  />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{product.category}</p>
-                  <h3 className="mt-1 text-base font-semibold text-black truncate">{product.name}</h3>
-                  <p className="mt-2 text-sm font-bold text-blue-600">{product.price}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="border-t border-zinc-200 py-12">

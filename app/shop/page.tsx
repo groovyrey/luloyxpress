@@ -81,10 +81,10 @@ function ProductCard({ product }: { product: ProductRow }) {
           </div>
         </div>
       </Link>
-      <div>
+      <div className="overflow-hidden">
         <div className="flex justify-between items-start gap-2">
           <Link href={`/products/${product.id}`} className="hover:text-blue-600 transition-colors flex-1 min-w-0">
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.category}</p>
               <h3 className="mt-1 text-base font-semibold text-black truncate">{product.name}</h3>
             </div>

@@ -18,7 +18,7 @@ export default function NavbarClient({
   const userName = session?.user?.name;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md print:hidden">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
@@ -38,7 +38,8 @@ export default function NavbarClient({
             </Link>
             <div className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-600">
               <Link href="/shop" className="hover:text-black transition-colors">Shop All</Link>
-              {session && <Link href="/membership" className="hover:text-black transition-colors">Membership</Link>}
+              <Link href="/new-arrivals" className="hover:text-black transition-colors">New Arrivals</Link>
+{session && <Link href="/membership" className="hover:text-black transition-colors">Membership</Link>}
               <Link href="/sell" className="hover:text-black transition-colors font-semibold text-blue-600">Sell</Link>
             </div>
           </div>
@@ -127,6 +128,7 @@ export default function NavbarClient({
 
           <div className="flex flex-col gap-4 text-base font-medium text-zinc-600">
             <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="hover:text-black px-2 py-1">Shop All</Link>
+            <Link href="/new-arrivals" onClick={() => setIsMenuOpen(false)} className="hover:text-black px-2 py-1">New Arrivals</Link>
             {session && <Link href="/membership" onClick={() => setIsMenuOpen(false)} className="hover:text-black px-2 py-1">Membership</Link>}
             <Link href="/sell" onClick={() => setIsMenuOpen(false)} className="hover:text-black px-2 py-1 font-semibold text-blue-600">Sell</Link>
           </div>

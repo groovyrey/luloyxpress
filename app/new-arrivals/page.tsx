@@ -53,15 +53,15 @@ export default async function NewArrivalsPage() {
                     </div>
                   </div>
                 </Link>
-                <div>
-                  <div className="flex justify-between items-start">
-                    <Link href={`/products/${product.id}`} className="hover:text-blue-600 transition-colors">
-                      <div>
+                <div className="overflow-hidden">
+                  <div className="flex justify-between items-start gap-2">
+                    <Link href={`/products/${product.id}`} className="hover:text-blue-600 transition-colors flex-1 min-w-0">
+                      <div className="min-w-0">
                         <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{product.category}</p>
                         <h3 className="mt-1 text-base font-semibold text-black truncate">{product.name}</h3>
                       </div>
                     </Link>
-                    <p className="text-sm font-bold text-blue-600">{product.price}</p>
+                    <p className="text-sm font-bold text-blue-600 whitespace-nowrap">{product.price}</p>
                   </div>
                   {product.seller_name && (
                     <div className="mt-2 flex items-center gap-2">

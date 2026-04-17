@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
+import BuyNowButton from "@/components/BuyNowButton";
 import DeleteProductButton from "@/components/DeleteProductButton";
 import { auth } from "@/auth";
 import { RowDataPacket } from "mysql2";
@@ -21,6 +22,10 @@ interface ProductRow extends RowDataPacket {
   seller_tier?: string;
 }
 
+interface UserBalanceRow extends RowDataPacket {
+  balance: string;
+}
+
 async function getProduct(id: string) {
   try {
     const [rows] = await pool.query<ProductRow[]>(
@@ -37,6 +42,19 @@ async function getProduct(id: string) {
   }
 }
 
+async function getUserBalance(userId: string) {
+  try {
+    const [rows] = await pool.query<UserBalanceRow[]>("SELECT balance FROM users WHERE id = ?", [userId]);
+    return rows[0]?.balance || "0";
+  } catch {
+    return "0";
+  }
+}
+
+function parsePrice(priceStr: string): number {
+  return parseFloat(priceStr.replace(/[^\d.]/g, ''));
+}
+
 export default async function ProductDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const product = await getProduct(id);
@@ -45,6 +63,9 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
   if (!product) {
     notFound();
   }
+
+  const balance = session?.user?.id ? await getUserBalance(session.user.id) : "0";
+  const price = parsePrice(product.price);
 
   const isSeller = session?.user?.id === product.seller_id?.toString();
   const isVerifiedSeller = product.seller_tier?.toLowerCase() === 'pro';
@@ -140,9 +161,20 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
 
             <div className="mt-auto space-y-4">
               {isSeller ? (
-                <DeleteProductButton productId={product.id} variant="full" />
+                <div className="flex flex-col gap-3">
+                  <Link 
+                    href={`/products/${product.id}/edit`}
+                    className="flex w-full items-center justify-center rounded-full bg-blue-600 px-6 py-4 text-sm font-bold text-white transition-all hover:bg-blue-700"
+                  >
+                    Edit Product
+                  </Link>
+                  <DeleteProductButton productId={product.id} variant="full" />
+                </div>
               ) : (
-                <AddToCartButton productId={product.id} />
+                <div className="flex flex-col gap-3">
+                  <BuyNowButton productId={product.id} balance={balance} price={price} />
+                  <AddToCartButton productId={product.id} />
+                </div>
               )}
             </div>
           </div>
