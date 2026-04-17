@@ -164,8 +164,6 @@ export default function NavbarClient({
                   <span className="text-sm font-black text-blue-600">{balance}</span>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <Link href={`/profile/${userId}`} onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-zinc-600">My Profile</Link>
-                  <Link href="/messages" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-zinc-600">Messages</Link>
                   <button 
                     onClick={() => signOut({ callbackUrl: "/" })}
                     className="text-sm font-bold text-red-600 text-left"

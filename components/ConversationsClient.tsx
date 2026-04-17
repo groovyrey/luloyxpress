@@ -67,7 +67,7 @@ export default function ConversationsClient({
               href={`/messages/${conv.id}`}
               className="flex items-center gap-4 p-6 hover:bg-zinc-50 transition-all group"
             >
-              <div className="h-14 w-14 rounded-full bg-zinc-100 flex items-center justify-center text-blue-600 font-black text-xl border-2 border-zinc-50 group-hover:border-blue-100 group-hover:bg-white transition-all">
+              <div className="h-14 w-14 flex-shrink-0 rounded-full bg-zinc-100 flex items-center justify-center text-blue-600 font-black text-xl border-2 border-zinc-50 group-hover:border-blue-100 group-hover:bg-white transition-all">
                 {conv.name.charAt(0)}
               </div>
               <div className="flex-grow min-w-0">

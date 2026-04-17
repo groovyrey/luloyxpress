@@ -105,7 +105,7 @@ export default function ChatClient({
     <div className="flex flex-col h-[calc(100vh-160px)] bg-white rounded-3xl border border-zinc-200 overflow-hidden shadow-xl">
       {/* Header */}
       <div className="p-6 border-b border-zinc-100 bg-zinc-50/50 flex items-center gap-4">
-        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
+        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
           {otherUserName.charAt(0)}
         </div>
         <div>
@@ -216,21 +216,33 @@ export default function ChatClient({
 
       {/* Input */}
       <form onSubmit={handleSendMessage} className="p-6 border-t border-zinc-100 bg-zinc-50/50">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-grow rounded-full border border-zinc-200 bg-white px-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-          />
-          <button
-            type="submit"
-            disabled={isSending || !content.trim()}
-            className="rounded-full bg-black px-6 py-3 text-sm font-bold text-white hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
-          >
-            {isSending ? "..." : "Send"}
-          </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Type a message..."
+              maxLength={100}
+              className="flex-grow rounded-full border border-zinc-200 bg-white px-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            />
+            <button
+              type="submit"
+              disabled={isSending || !content.trim()}
+              className="rounded-full bg-black px-6 py-3 text-sm font-bold text-white hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isSending ? "..." : "Send"}
+            </button>
+          </div>
+          {content.length > 0 && (
+            <div className="flex justify-end px-4">
+              <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                content.length >= 90 ? "text-red-500" : "text-zinc-400"
+              }`}>
+                {content.length} / 100
+              </span>
+            </div>
+          )}
         </div>
       </form>
     </div>

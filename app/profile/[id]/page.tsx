@@ -84,20 +84,31 @@ async function getFullUser(userId: string) {
   }
 }
 
-async function getUserTransactions(userId: string) {
+async function getUserTransactions(userId: string, page: number = 1, pageSize: number = 5) {
   try {
+    const offset = (page - 1) * pageSize;
     const [rows] = await pool.query<TransactionRow[]>(
       `SELECT o.id as order_id, o.total_amount, o.status, o.created_at
        FROM orders o
        WHERE o.buyer_id = ?
        ORDER BY o.created_at DESC
-       LIMIT 5`,
+       LIMIT ? OFFSET ?`,
+      [userId, pageSize, offset]
+    );
+    
+    const [countRows] = await pool.query<RowDataPacket[]>(
+      "SELECT COUNT(*) as total FROM orders WHERE buyer_id = ?",
       [userId]
     );
-    return rows;
+    
+    return {
+      data: rows,
+      total: countRows[0].total,
+      totalPages: Math.ceil(countRows[0].total / pageSize)
+    };
   } catch (error) {
     console.error("Error fetching transactions:", error);
-    return [];
+    return { data: [], total: 0, totalPages: 0 };
   }
 }
 
@@ -154,19 +165,30 @@ async function getRecentSales(userId: string) {
   }
 }
 
-async function getUserWalletTransactions(userId: string) {
+async function getUserWalletTransactions(userId: string, page: number = 1, pageSize: number = 10) {
   try {
+    const offset = (page - 1) * pageSize;
     const [rows] = await pool.query<WalletTransactionRow[]>(
       `SELECT * FROM transactions 
        WHERE user_id = ? 
        ORDER BY created_at DESC 
-       LIMIT 10`,
+       LIMIT ? OFFSET ?`,
+      [userId, pageSize, offset]
+    );
+
+    const [countRows] = await pool.query<RowDataPacket[]>(
+      "SELECT COUNT(*) as total FROM transactions WHERE user_id = ?",
       [userId]
     );
-    return rows;
+
+    return {
+      data: rows,
+      total: countRows[0].total,
+      totalPages: Math.ceil(countRows[0].total / pageSize)
+    };
   } catch (error) {
     console.error("Error fetching wallet transactions:", error);
-    return [];
+    return { data: [], total: 0, totalPages: 0 };
   }
 }
 
@@ -190,10 +212,10 @@ export default async function ProfilePage({
   searchParams 
 }: { 
   params: Promise<{ id: string }>, 
-  searchParams: Promise<{ checkout?: string }> 
+  searchParams: Promise<{ checkout?: string, purchasesPage?: string, txPage?: string }> 
 }) {
   const { id } = await params;
-  const { checkout } = await searchParams;
+  const { checkout, purchasesPage, txPage } = await searchParams;
   const session = await auth();
   
   const dbUser = await getFullUser(id);
@@ -201,14 +223,17 @@ export default async function ProfilePage({
     notFound();
   }
 
+  const pPage = parseInt(purchasesPage || '1');
+  const tPage = parseInt(txPage || '1');
+
   const isOwnProfile = session?.user?.id === id;
   const userProducts = await getUserProducts(id);
-  const transactions = isOwnProfile ? await getUserTransactions(id) : [];
+  const { data: transactions, totalPages: purchaseTotalPages } = isOwnProfile ? await getUserTransactions(id, pPage) : { data: [], totalPages: 0 };
   const orderIds = transactions.map(t => t.order_id);
   const allOrderItems = await getOrderItems(orderIds);
   const sellerStats = isOwnProfile ? await getSellerStats(id) : null;
   const recentSales = isOwnProfile ? await getRecentSales(id) : [];
-  const walletTransactions = isOwnProfile ? await getUserWalletTransactions(id) : [];
+  const { data: walletTransactions, totalPages: txTotalPages } = isOwnProfile ? await getUserWalletTransactions(id, tPage) : { data: [], totalPages: 0 };
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -221,7 +246,7 @@ export default async function ProfilePage({
           <section className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="flex items-center gap-6">
-                <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold uppercase">
+                <div className="h-20 w-20 flex-shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold uppercase">
                   {dbUser.name.charAt(0)}
                 </div>
                 <div>
@@ -321,47 +346,74 @@ export default async function ProfilePage({
                   <p className="text-zinc-500">No transactions recorded yet.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-zinc-100">
-                  <table className="min-w-full divide-y divide-zinc-100">
-                    <thead className="bg-zinc-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Type</th>
-                        <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Description</th>
-                        <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</th>
-                        <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-zinc-100">
-                      {walletTransactions.map((tx) => (
-                        <tr key={tx.id} className="hover:bg-zinc-50/50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                              tx.type === 'deposit' || tx.type === 'sale' 
-                                ? 'bg-green-50 text-green-600' 
-                                : 'bg-red-50 text-red-600'
-                            }`}>
-                              {tx.type}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="text-sm font-medium text-zinc-700">{tx.description}</p>
-                            {tx.reference_id && <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">Ref: #{tx.reference_id}</p>}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <p className={`text-sm font-bold ${
-                              tx.type === 'deposit' || tx.type === 'sale' ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {tx.type === 'deposit' || tx.type === 'sale' ? '+' : '-'} ₱{parseFloat(tx.amount).toLocaleString()}
-                            </p>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-xs text-zinc-500 font-medium">
-                            {new Date(tx.created_at).toLocaleDateString()}
-                          </td>
+                <>
+                  <div className="overflow-x-auto rounded-xl border border-zinc-100">
+                    <table className="min-w-full divide-y divide-zinc-100">
+                      <thead className="bg-zinc-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Type</th>
+                          <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Description</th>
+                          <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Amount</th>
+                          <th className="px-6 py-3 text-left text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-zinc-100">
+                        {walletTransactions.map((tx) => (
+                          <tr key={tx.id} className="hover:bg-zinc-50/50 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                tx.type === 'deposit' || tx.type === 'sale' 
+                                  ? 'bg-green-50 text-green-600' 
+                                  : 'bg-red-50 text-red-600'
+                              }`}>
+                                {tx.type}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-medium text-zinc-700">{tx.description}</p>
+                              {tx.reference_id && <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">Ref: #{tx.reference_id}</p>}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <p className={`text-sm font-bold ${
+                                tx.type === 'deposit' || tx.type === 'sale' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {tx.type === 'deposit' || tx.type === 'sale' ? '+' : '-'} ₱{parseFloat(tx.amount).toLocaleString()}
+                              </p>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-xs text-zinc-500 font-medium">
+                              {new Date(tx.created_at).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {txTotalPages > 1 && (
+                    <div className="mt-6 flex items-center justify-between">
+                      <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest">
+                        Page {tPage} of {txTotalPages}
+                      </p>
+                      <div className="flex gap-2">
+                        {tPage > 1 && (
+                          <Link 
+                            href={`/profile/${id}?txPage=${tPage - 1}&purchasesPage=${pPage}`}
+                            className="px-4 py-2 text-xs font-bold text-zinc-600 bg-zinc-50 rounded-lg hover:bg-zinc-100 transition-colors"
+                          >
+                            Previous
+                          </Link>
+                        )}
+                        {tPage < txTotalPages && (
+                          <Link 
+                            href={`/profile/${id}?txPage=${tPage + 1}&purchasesPage=${pPage}`}
+                            className="px-4 py-2 text-xs font-bold text-zinc-600 bg-zinc-50 rounded-lg hover:bg-zinc-100 transition-colors"
+                          >
+                            Next
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </section>
           )}
@@ -412,6 +464,31 @@ export default async function ProfilePage({
                       </div>
                     </div>
                   ))}
+                  {purchaseTotalPages > 1 && (
+                    <div className="mt-8 flex items-center justify-between pt-4">
+                      <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest">
+                        Page {pPage} of {purchaseTotalPages}
+                      </p>
+                      <div className="flex gap-2">
+                        {pPage > 1 && (
+                          <Link 
+                            href={`/profile/${id}?purchasesPage=${pPage - 1}&txPage=${tPage}`}
+                            className="px-6 py-2.5 text-xs font-bold text-zinc-600 bg-zinc-50 rounded-xl hover:bg-zinc-100 transition-colors"
+                          >
+                            Previous
+                          </Link>
+                        )}
+                        {pPage < purchaseTotalPages && (
+                          <Link 
+                            href={`/profile/${id}?purchasesPage=${pPage + 1}&txPage=${tPage}`}
+                            className="px-6 py-2.5 text-xs font-bold text-zinc-600 bg-zinc-50 rounded-xl hover:bg-zinc-100 transition-colors"
+                          >
+                            Next
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
@@ -436,27 +513,26 @@ export default async function ProfilePage({
                 {isOwnProfile && <Link href="/sell" className="mt-4 inline-block text-sm font-bold text-blue-600">Start selling today</Link>}
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-2 sm:gap-x-6 lg:grid-cols-3 lg:gap-x-8">
                 {userProducts.map((product) => (
                   <div key={product.id} className="relative group">
-                    <Link href={`/products/${product.id}`} className="border border-zinc-100 rounded-xl overflow-hidden p-3 transition-hover hover:border-blue-100 block">
-                      <div className="aspect-square w-full mb-3 rounded-lg overflow-hidden bg-white relative">
+                    <Link href={`/products/${product.id}`} className="block group cursor-pointer">
+                      <div className="relative mb-4 aspect-square overflow-hidden rounded-3xl bg-white shadow-sm border border-zinc-100">
                         <Image 
                           src={product.image} 
                           alt={product.name} 
                           fill 
-                          className="object-contain group-hover:scale-105 transition-transform duration-500" 
+                          className="object-contain object-center transition-transform duration-500 group-hover:scale-105" 
                           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
                         />
                       </div>
 
-                      <div>
-                        <h3 className="text-sm font-bold text-zinc-900 truncate">{product.name}</h3>
-                        <p className="text-xs text-zinc-500 mb-2">{product.category}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-blue-600">{product.price}</span>
-                          <span className="text-[10px] font-bold text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded uppercase">Available</span>
+                      <div className="flex justify-between items-start gap-2 overflow-hidden px-1">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.category}</p>
+                          <h3 className="mt-1 text-sm font-bold text-zinc-900 truncate">{product.name}</h3>
                         </div>
+                        <p className="mt-1 text-sm font-black text-blue-600 whitespace-nowrap">{product.price}</p>
                       </div>
                     </Link>
                     {isOwnProfile && <DeleteProductButton productId={product.id} />}
