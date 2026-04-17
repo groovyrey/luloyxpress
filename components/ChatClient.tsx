@@ -1,13 +1,15 @@
 "use client";
-
 import { useState, useEffect, useRef } from "react";
 import { getAblyChannel } from "@/lib/ably";
-import { sendMessage, Message } from "@/lib/actions";
+import { sendMessage, Message, deleteMessage } from "@/lib/actions";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
 import Image from "next/image";
+import { usePresence } from "./PresenceProvider";
 
 interface ChatClientProps {
+// ... existing props
+
   currentUserId: string;
   otherUserId: string;
   otherUserName: string;
@@ -27,6 +29,8 @@ export default function ChatClient({
   initialMessages,
   productContext 
 }: ChatClientProps) {
+  const { onlineUsers } = usePresence();
+  const isOnline = onlineUsers.has(otherUserId);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [content, setContent] = useState("");
   const [isSending, setIsPending] = useState(false);
@@ -51,17 +55,41 @@ export default function ChatClient({
       });
     });
 
+    channel.subscribe("message_delete", (message) => {
+      const { messageId } = message.data;
+      setMessages((prev) => prev.filter(m => m.id !== messageId));
+    });
+
     return () => {
       channel.unsubscribe();
     };
   }, [currentUserId, otherUserId]);
+
+  const handleDeleteMessage = async (messageId: number) => {
+    const result = await deleteMessage(messageId, parseInt(otherUserId));
+    if (result.success) {
+      setMessages((prev) => prev.filter(m => m.id !== messageId));
+      const channel = getAblyChannel(currentUserId, otherUserId);
+      channel.publish("message_delete", { messageId });
+    } else {
+      alert(result.error || "Failed to delete message");
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() || isSending) return;
 
     setIsPending(true);
-    const result = await sendMessage(parseInt(otherUserId), content);
+    
+    // Auto-append product context if present
+    let finalContent = content;
+    if (productContext) {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+      finalContent += `\n\n> Inquiry: [${productContext.name}](${baseUrl}/products/${productContext.id})`;
+    }
+
+    const result = await sendMessage(parseInt(otherUserId), finalContent);
     setIsPending(false);
 
     if (result.success && result.message) {
@@ -82,9 +110,15 @@ export default function ChatClient({
         </div>
         <div>
           <h2 className="font-black text-zinc-900">{otherUserName}</h2>
-          <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-600"></span> Online
-          </p>
+          {isOnline ? (
+            <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-600 animate-pulse"></span> Online
+            </p>
+          ) : (
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-300"></span> Offline
+            </p>
+          )}
         </div>
       </div>
 
@@ -127,32 +161,52 @@ export default function ChatClient({
         {messages.map((msg) => {
           const isOwn = msg.sender_id.toString() === currentUserId;
           return (
-            <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
-                isOwn 
-                ? "bg-blue-600 text-white rounded-tr-none shadow-md shadow-blue-500/20" 
-                : "bg-zinc-100 text-zinc-900 rounded-tl-none"
-              }`}>
-                <ReactMarkdown
-                  components={{
-                    a: ({ ...props }) => (
-                      <a 
-                        {...props} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className={`underline decoration-2 underline-offset-2 font-bold hover:opacity-80 transition-opacity ${
-                          isOwn ? "text-white" : "text-blue-600"
-                        }`} 
-                      />
-                    ),
-                    p: ({ children }) => <p className="m-0 break-words">{children}</p>
-                  }}
-                >
-                  {msg.content}
-                </ReactMarkdown>
-                <p className={`text-[10px] mt-1 opacity-60 text-right ${isOwn ? "text-white" : "text-zinc-500"}`}>
-                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
+            <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"} group/msg`}>
+              <div className="flex items-end gap-2 max-w-[80%]">
+                {isOwn && (
+                  <button
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    className="opacity-0 group-hover/msg:opacity-100 p-1.5 text-zinc-300 hover:text-red-500 transition-all rounded-full hover:bg-red-50"
+                    title="Delete message"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                  </button>
+                )}
+                <div className={`rounded-2xl px-4 py-3 text-sm flex-grow ${
+                  isOwn 
+                  ? "bg-blue-600 text-white rounded-tr-none shadow-md shadow-blue-500/20" 
+                  : "bg-zinc-100 text-zinc-900 rounded-tl-none"
+                }`}>
+                  <ReactMarkdown
+                    components={{
+                      a: ({ ...props }) => (
+                        <a 
+                          {...props} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className={`underline decoration-2 underline-offset-2 font-bold hover:opacity-80 transition-opacity ${
+                            isOwn ? "text-white" : "text-blue-600"
+                          }`} 
+                        />
+                      ),
+                      p: ({ children }) => <p className="m-0 break-words">{children}</p>,
+                      blockquote: ({ children }) => (
+                        <blockquote className={`border-l-4 pl-3 py-1 my-2 italic text-xs rounded-r-lg ${
+                          isOwn 
+                          ? "border-white/30 bg-white/10 text-white/90" 
+                          : "border-blue-600/30 bg-blue-50 text-zinc-600"
+                        }`}>
+                          {children}
+                        </blockquote>
+                      )
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                  <p className={`text-[10px] mt-1 opacity-60 text-right ${isOwn ? "text-white" : "text-zinc-500"}`}>
+                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
               </div>
             </div>
           );

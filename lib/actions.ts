@@ -627,6 +627,9 @@ export async function addFunds(amount: number) {
   const session = await auth();
   if (!session || !session.user?.id) return { error: 'Not authenticated' };
 
+  if (amount < 500) return { error: 'Minimum top-up is ₱500' };
+  if (amount > 1000000) return { error: 'Maximum top-up is ₱1,000,000' };
+
   const connection = await pool.getConnection();
 
   try {
@@ -759,6 +762,35 @@ export async function buyNow(productId: number, paymentMethod: string = 'wallet'
   }
 }
 
+export async function deleteMessage(messageId: number, receiverId: number) {
+  const session = await auth();
+  if (!session || !session.user?.id) return { error: 'Not authenticated' };
+
+  try {
+    // Verify ownership before deleting
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT sender_id FROM messages WHERE id = ?',
+      [messageId]
+    );
+
+    if (rows.length === 0) return { error: 'Message not found' };
+    if (rows[0].sender_id !== parseInt(session.user.id)) return { error: 'Unauthorized' };
+
+    await pool.query('DELETE FROM messages WHERE id = ?', [messageId]);
+
+    // Notify receiver via Ably to remove message from UI
+    const chatChannel = ably.channels.get(
+      `chat:${[session.user.id, receiverId.toString()].sort().join('-')}`
+    );
+    chatChannel.publish('message_delete', { messageId });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    return { error: 'Failed to delete message' };
+  }
+}
+
 export interface Message extends RowDataPacket {
   id: number;
   sender_id: number;
@@ -792,6 +824,21 @@ export async function sendMessage(receiverId: number, content: string) {
       senderName: session.user.name,
       content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
     });
+
+    // Enforce 20-message limit: Delete everything except the 20 most recent
+    await pool.query(
+      `DELETE FROM messages 
+       WHERE id IN (
+         SELECT id FROM (
+           SELECT id FROM messages 
+           WHERE (sender_id = ? AND receiver_id = ?) 
+              OR (sender_id = ? AND receiver_id = ?)
+           ORDER BY created_at DESC, id DESC
+           LIMIT 1000 OFFSET 20
+         ) as t
+       )`,
+      [session.user.id, receiverId, receiverId, session.user.id]
+    );
 
     return { success: true, message: newMessage };
   } catch (error) {
@@ -831,6 +878,10 @@ export async function getConversations() {
          WHERE (sender_id = u.id AND receiver_id = ?) 
             OR (sender_id = ? AND receiver_id = u.id)
          ORDER BY created_at DESC LIMIT 1) as last_message,
+        (SELECT sender_id FROM messages 
+         WHERE (sender_id = u.id AND receiver_id = ?) 
+            OR (sender_id = ? AND receiver_id = u.id)
+         ORDER BY created_at DESC LIMIT 1) as last_sender_id,
         (SELECT created_at FROM messages 
          WHERE (sender_id = u.id AND receiver_id = ?) 
             OR (sender_id = ? AND receiver_id = u.id)
@@ -839,7 +890,7 @@ export async function getConversations() {
       JOIN messages m ON (u.id = m.sender_id OR u.id = m.receiver_id)
       WHERE u.id != ? AND (m.sender_id = ? OR m.receiver_id = ?)
       ORDER BY last_message_at DESC`,
-      [session.user.id, session.user.id, session.user.id, session.user.id, session.user.id, session.user.id, session.user.id]
+      [session.user.id, session.user.id, session.user.id, session.user.id, session.user.id, session.user.id, session.user.id, session.user.id, session.user.id]
     );
     return rows;
   } catch (error) {

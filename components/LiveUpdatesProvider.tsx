@@ -1,9 +1,11 @@
 "use client";
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { ably } from "@/lib/ably";
+import PresenceProvider from "./PresenceProvider";
 
 interface LiveUpdatesContextType {
+// ...
+
   cartCount: number;
   balance: string;
   unreadMessages: number;
@@ -72,8 +74,10 @@ export default function LiveUpdatesProvider({
   }, [userId]);
 
   return (
-    <LiveUpdatesContext.Provider value={{ cartCount, balance, unreadMessages, setUnreadMessages }}>
-      {children}
-    </LiveUpdatesContext.Provider>
+    <PresenceProvider userId={userId}>
+      <LiveUpdatesContext.Provider value={{ cartCount, balance, unreadMessages, setUnreadMessages }}>
+        {children}
+      </LiveUpdatesContext.Provider>
+    </PresenceProvider>
   );
 }
