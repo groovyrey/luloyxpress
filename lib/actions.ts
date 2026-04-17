@@ -9,9 +9,11 @@ import cloudinary from '@/lib/cloudinary';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
 import { validatePrice } from '@/lib/currency';
+import { ably } from '@/lib/ably';
 
 interface UserRow extends RowDataPacket {
-  id: number;
+// ...
+
   name: string;
   email: string;
   password?: string;
@@ -448,6 +450,10 @@ export async function addToCart(productId: number) {
       );
     }
 
+    const count = await getCartCount();
+    const channel = ably.channels.get(`user:${session.user.id}`);
+    channel.publish('cart_update', { count });
+
     revalidatePath('/', 'layout');
     return { success: true };
   } catch (error) {
@@ -480,6 +486,11 @@ export async function removeFromCart(cartItemId: number) {
 
   try {
     await pool.query('DELETE FROM cart_items WHERE id = ? AND user_id = ?', [cartItemId, session.user.id]);
+    
+    const count = await getCartCount();
+    const channel = ably.channels.get(`user:${session.user.id}`);
+    channel.publish('cart_update', { count });
+
     revalidatePath('/', 'layout');
     return { success: true };
   } catch {
@@ -574,6 +585,11 @@ export async function checkout(selectedCartItemIds?: number[], paymentMethod: st
         `Sold: ${item.name} (x${item.quantity})`,
         orderId
       );
+
+      // Notify seller of balance update
+      const sellerChannel = ably.channels.get(`user:${item.seller_id}`);
+      const [sellerRows] = await connection.query<UserRow[]>('SELECT balance FROM users WHERE id = ?', [item.seller_id]);
+      sellerChannel.publish('balance_update', { balance: sellerRows[0].balance });
     }
 
     // 7. Clear processed items from cart
@@ -584,6 +600,14 @@ export async function checkout(selectedCartItemIds?: number[], paymentMethod: st
     }
 
     await connection.commit();
+
+    // Notify buyer of balance and cart update
+    const buyerChannel = ably.channels.get(`user:${session.user.id}`);
+    const [updatedBuyerRows] = await pool.query<UserRow[]>('SELECT balance FROM users WHERE id = ?', [session.user.id]);
+    buyerChannel.publish('balance_update', { balance: updatedBuyerRows[0].balance });
+    
+    const count = await getCartCount();
+    buyerChannel.publish('cart_update', { count });
     
     revalidatePath('/', 'layout');
     revalidatePath(`/profile/${session.user.id}`);
@@ -620,6 +644,11 @@ export async function addFunds(amount: number) {
     );
 
     await connection.commit();
+
+    // Notify user of balance update
+    const [userRows] = await pool.query<UserRow[]>('SELECT balance FROM users WHERE id = ?', [session.user.id]);
+    const channel = ably.channels.get(`user:${session.user.id}`);
+    channel.publish('balance_update', { balance: userRows[0].balance });
 
     revalidatePath(`/profile/${session.user.id}`);
     return { success: true };
@@ -704,6 +733,16 @@ export async function buyNow(productId: number, paymentMethod: string = 'wallet'
     );
 
     await connection.commit();
+
+    // Notify buyer
+    const buyerChannel = ably.channels.get(`user:${session.user.id}`);
+    const [updatedBuyerRows] = await pool.query<UserRow[]>('SELECT balance FROM users WHERE id = ?', [session.user.id]);
+    buyerChannel.publish('balance_update', { balance: updatedBuyerRows[0].balance });
+
+    // Notify seller
+    const sellerChannel = ably.channels.get(`user:${product.seller_id}`);
+    const [sellerRows] = await pool.query<UserRow[]>('SELECT balance FROM users WHERE id = ?', [product.seller_id]);
+    sellerChannel.publish('balance_update', { balance: sellerRows[0].balance });
     
     revalidatePath('/', 'layout');
     revalidatePath(`/profile/${session.user.id}`);
@@ -717,5 +756,94 @@ export async function buyNow(productId: number, paymentMethod: string = 'wallet'
     return { error: (error as Error).message || 'Purchase failed' };
   } finally {
     connection.release();
+  }
+}
+
+export interface Message extends RowDataPacket {
+  id: number;
+  sender_id: number;
+  receiver_id: number;
+  content: string;
+  created_at: string | Date;
+}
+
+export async function sendMessage(receiverId: number, content: string) {
+  const session = await auth();
+  if (!session || !session.user?.id) return { error: 'Not authenticated' };
+
+  try {
+    const [result] = await pool.query<ResultSetHeader>(
+      'INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
+      [session.user.id, receiverId, content]
+    );
+
+    const newMessage = {
+      id: result.insertId,
+      sender_id: parseInt(session.user.id),
+      receiver_id: receiverId,
+      content,
+      created_at: new Date()
+    };
+
+    // Notify receiver via their personal channel for global notifications
+    const receiverChannel = ably.channels.get(`user:${receiverId}`);
+    receiverChannel.publish('new_message', { 
+      senderId: session.user.id, 
+      senderName: session.user.name,
+      content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
+    });
+
+    return { success: true, message: newMessage };
+  } catch (error) {
+    console.error('Error sending message:', error);
+    return { error: 'Failed to send message' };
+  }
+}
+
+export async function getMessages(otherUserId: number): Promise<Message[]> {
+  const session = await auth();
+  if (!session || !session.user?.id) return [];
+
+  try {
+    const [rows] = await pool.query<Message[]>(
+      `SELECT * FROM messages 
+       WHERE (sender_id = ? AND receiver_id = ?) 
+          OR (sender_id = ? AND receiver_id = ?)
+       ORDER BY created_at ASC`,
+      [session.user.id, otherUserId, otherUserId, session.user.id]
+    );
+    return rows;
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    return [];
+  }
+}
+
+export async function getConversations() {
+  const session = await auth();
+  if (!session || !session.user?.id) return [];
+
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT DISTINCT 
+        u.id, u.name, u.email,
+        (SELECT content FROM messages 
+         WHERE (sender_id = u.id AND receiver_id = ?) 
+            OR (sender_id = ? AND receiver_id = u.id)
+         ORDER BY created_at DESC LIMIT 1) as last_message,
+        (SELECT created_at FROM messages 
+         WHERE (sender_id = u.id AND receiver_id = ?) 
+            OR (sender_id = ? AND receiver_id = u.id)
+         ORDER BY created_at DESC LIMIT 1) as last_message_at
+      FROM users u
+      JOIN messages m ON (u.id = m.sender_id OR u.id = m.receiver_id)
+      WHERE u.id != ? AND (m.sender_id = ? OR m.receiver_id = ?)
+      ORDER BY last_message_at DESC`,
+      [session.user.id, session.user.id, session.user.id, session.user.id, session.user.id, session.user.id, session.user.id]
+    );
+    return rows;
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    return [];
   }
 }

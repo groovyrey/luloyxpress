@@ -5,14 +5,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { Session } from "next-auth";
 import { signOut } from "next-auth/react";
+import { useLiveUpdates } from "./LiveUpdatesProvider";
 
 export default function NavbarClient({ 
-  session, 
-  cartCount = 0 
+  session
 }: { 
   session: Session | null;
-  cartCount?: number;
 }) {
+  const { cartCount, balance, unreadMessages, setUnreadMessages } = useLiveUpdates();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const userId = session?.user?.id;
   const userName = session?.user?.name;
@@ -61,25 +61,43 @@ export default function NavbarClient({
             </div>
 
             {/* Cart Icon (Visible on all screens) */}
-            <div className="flex items-center gap-2 mr-2">
+            <div className="flex items-center gap-1 mr-2">
               <Link href="/cart" className="relative p-2 text-zinc-600 hover:text-black transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                 <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white border-2 border-white shadow-sm animate-in zoom-in duration-300">
                   {cartCount > 99 ? '99+' : cartCount}
                 </span>
               </Link>
+
+              {userId && (
+                <Link 
+                  href="/messages" 
+                  onClick={() => setUnreadMessages(0)}
+                  className="relative p-2 text-zinc-600 hover:text-black transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  {unreadMessages > 0 && (
+                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white animate-pulse">
+                      {unreadMessages}
+                    </span>
+                  )}
+                </Link>
+              )}
             </div>
 
             {/* Auth Button Desktop */}
             <div className="hidden md:block">
               {userId ? (
                 <div className="flex items-center gap-4 border-l border-zinc-200 pl-4">
-                  <Link href={`/profile/${userId}`} className="text-sm font-medium text-zinc-600 hover:text-black transition-colors">
-                    Hi, {userName?.split(' ')[0]}
-                  </Link>
+                  <div className="flex flex-col items-end">
+                    <Link href={`/profile/${userId}`} className="text-sm font-bold text-zinc-900 hover:text-blue-600 transition-colors">
+                      Hi, {userName?.split(' ')[0]}
+                    </Link>
+                    <span className="text-[11px] font-black text-blue-600">{balance}</span>
+                  </div>
                   <button 
                     onClick={() => signOut({ callbackUrl: "/" })}
-                    className="text-sm font-bold text-black hover:text-zinc-600 transition-colors"
+                    className="text-xs font-bold text-zinc-400 hover:text-red-600 transition-colors"
                   >
                     Sign Out
                   </button>
@@ -135,15 +153,19 @@ export default function NavbarClient({
           <div className="pt-4 border-t border-zinc-100">
             {userId ? (
               <div className="space-y-4 px-2">
-                <Link 
-                  href={`/profile/${userId}`} 
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block text-lg font-bold text-black hover:text-blue-600 transition-colors"
-                >
-                  Hi, {userName?.split(' ')[0]}
-                </Link>
+                <div className="flex flex-col">
+                  <Link 
+                    href={`/profile/${userId}`} 
+                    onClick={() => setIsMenuOpen(false)}
+                    className="text-lg font-bold text-black hover:text-blue-600 transition-colors"
+                  >
+                    Hi, {userName?.split(' ')[0]}
+                  </Link>
+                  <span className="text-sm font-black text-blue-600">{balance}</span>
+                </div>
                 <div className="flex flex-col gap-3">
                   <Link href={`/profile/${userId}`} onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-zinc-600">My Profile</Link>
+                  <Link href="/messages" onClick={() => setIsMenuOpen(false)} className="text-sm font-medium text-zinc-600">Messages</Link>
                   <button 
                     onClick={() => signOut({ callbackUrl: "/" })}
                     className="text-sm font-bold text-red-600 text-left"

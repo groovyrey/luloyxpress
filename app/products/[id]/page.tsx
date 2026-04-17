@@ -174,6 +174,12 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
                 <div className="flex flex-col gap-3">
                   <BuyNowButton productId={product.id} balance={balance} price={price} />
                   <AddToCartButton productId={product.id} />
+                  <Link
+                    href={`/messages/${product.seller_id}?product=${product.id}`}
+                    className="flex w-full items-center justify-center rounded-full border-2 border-zinc-900 bg-transparent px-6 py-4 text-sm font-bold text-zinc-900 transition-all hover:bg-zinc-50 shadow-sm active:scale-[0.98]"
+                  >
+                    Message Seller
+                  </Link>
                 </div>
               )}
             </div>
