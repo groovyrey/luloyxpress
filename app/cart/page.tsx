@@ -59,7 +59,6 @@ export default async function CartPage() {
         <CartClient 
           cartItems={cartItems} 
           balance={balance} 
-          userId={session.user.id} 
         />
       </div>
     </div>

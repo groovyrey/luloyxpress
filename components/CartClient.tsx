@@ -19,10 +19,9 @@ interface CartItem {
 interface CartClientProps {
   cartItems: CartItem[];
   balance: string;
-  userId: string;
 }
 
-export default function CartClient({ cartItems, balance }: Omit<CartClientProps, 'userId'>) {
+export default function CartClient({ cartItems, balance }: CartClientProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>(cartItems.map(item => item.cart_item_id));
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);

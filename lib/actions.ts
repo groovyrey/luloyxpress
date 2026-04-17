@@ -6,7 +6,8 @@ import { signIn, auth } from '@/auth';
 import { AuthError } from 'next-auth';
 import { revalidatePath } from 'next/cache';
 import cloudinary from '@/lib/cloudinary';
-import { RowDataPacket, ResultSetHeader, PoolConnection } from 'mysql2';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { PoolConnection } from 'mysql2/promise';
 import { validatePrice } from '@/lib/currency';
 
 interface UserRow extends RowDataPacket {
