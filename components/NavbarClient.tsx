@@ -7,12 +7,25 @@ import { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import { useLiveUpdates } from "./LiveUpdatesProvider";
 
+import { useEffect } from "react";
+// ... existing imports
+
 export default function NavbarClient({ 
-  session
+  session,
+  initialCartCount,
+  initialBalance
 }: { 
   session: Session | null;
+  initialCartCount: number;
+  initialBalance: string;
 }) {
   const { cartCount, balance, unreadMessages, setUnreadMessages } = useLiveUpdates();
+  // We use local state for display if context is still initial "0"
+  // But actually, it's better to have LiveUpdatesProvider take these and update its state.
+  
+  // For now, let's assume we want to use the most "fresh" data.
+  const displayCartCount = cartCount || initialCartCount;
+  const displayBalance = balance === "0" ? initialBalance : balance;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const userId = session?.user?.id;
   const userName = session?.user?.name;
@@ -65,7 +78,7 @@ export default function NavbarClient({
               <Link href="/cart" className="relative p-2 text-zinc-600 hover:text-black transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                 <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white border-2 border-white shadow-sm animate-in zoom-in duration-300">
-                  {cartCount > 99 ? '99+' : cartCount}
+                  {displayCartCount > 99 ? '99+' : displayCartCount}
                 </span>
               </Link>
 
@@ -93,7 +106,7 @@ export default function NavbarClient({
                     <Link href={`/profile/${userId}`} className="text-sm font-bold text-zinc-900 hover:text-blue-600 transition-colors">
                       Hi, {userName?.split(' ')[0]}
                     </Link>
-                    <span className="text-[11px] font-black text-blue-600">{balance}</span>
+                    <span className="text-[11px] font-black text-blue-600">{displayBalance}</span>
                   </div>
                   <button 
                     onClick={() => signOut({ callbackUrl: "/" })}
@@ -161,7 +174,7 @@ export default function NavbarClient({
                   >
                     Hi, {userName?.split(' ')[0]}
                   </Link>
-                  <span className="text-sm font-black text-blue-600">{balance}</span>
+                  <span className="text-sm font-black text-blue-600">{displayBalance}</span>
                 </div>
                 <div className="flex flex-col gap-3">
                   <button 

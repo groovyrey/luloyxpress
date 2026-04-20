@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 import { signIn, auth } from '@/auth';
@@ -45,13 +46,18 @@ interface CloudinaryUploadResult {
   secure_url: string;
 }
 
-export async function register(formData: FormData): Promise<void> {
+export type ActionState = {
+  error?: string;
+  success?: boolean;
+};
+
+export async function register(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const name = formData.get('name') as string;
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
   if (!name || !email || !password) {
-    return;
+    return { error: 'Missing fields' };
   }
 
   try {
@@ -60,16 +66,18 @@ export async function register(formData: FormData): Promise<void> {
     // Check if user exists
     const [existing] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE email = ?', [email]);
     if (existing.length > 0) {
-      return;
+      return { error: 'User already exists' };
     }
 
     await pool.query(
       'INSERT INTO users (name, email, password, account_type) VALUES (?, ?, ?, ?)',
       [name, email, hashedPassword, 'standard']
     );
+    
+    return { success: true };
   } catch (error) {
     console.error('Registration error:', error);
-    return;
+    return { error: 'Registration failed' };
   }
 }
 
@@ -159,7 +167,7 @@ export async function updateMembership(formData: FormData) {
   }
 }
 
-export async function loginAction(formData: FormData): Promise<void> {
+export async function loginAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
@@ -169,17 +177,21 @@ export async function loginAction(formData: FormData): Promise<void> {
       password,
       redirectTo: '/',
     });
+    return { success: true };
   } catch (error) {
     if (error instanceof AuthError) {
-      // In this flow we don't return an error object, because form actions
-      // must resolve to void. Client-side error reporting can be added later.
-      return;
+      switch (error.type) {
+        case 'CredentialsSignin':
+          return { error: 'Invalid credentials' };
+        default:
+          return { error: 'Something went wrong.' };
+      }
     }
     throw error;
   }
 }
 
-export async function createProduct(formData: FormData) {
+export async function createProduct(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const name = formData.get('name') as string;
   const rawPrice = formData.get('price') as string;
   let category = formData.get('category') as string;
@@ -258,15 +270,15 @@ export async function createProduct(formData: FormData) {
     revalidatePath('/shop');
     revalidatePath('/');
     revalidatePath(`/profile/${session.user.id}`);
+    
+    return { success: true };
   } catch (error) {
     console.error('Error creating product:', error);
     return { error: 'Failed to create product' };
   }
-
-  return { success: true };
 }
 
-export async function updateProduct(productId: number, formData: FormData) {
+export async function updateProduct(productId: number, prevState: ActionState, formData: FormData): Promise<ActionState> {
   const name = formData.get('name') as string;
   const rawPrice = formData.get('price') as string;
   let category = formData.get('category') as string;
@@ -462,7 +474,7 @@ export async function addToCart(productId: number) {
   }
 }
 
-export async function getCartCount(): Promise<number> {
+export const getCartCount = cache(async (): Promise<number> => {
   const session = await auth();
   if (!session || !session.user?.id) return 0;
 
@@ -476,7 +488,7 @@ export async function getCartCount(): Promise<number> {
     console.error('Error getting cart count:', error);
     return 0;
   }
-}
+});
 
 export async function removeFromCart(cartItemId: number) {
   const session = await auth();
@@ -866,7 +878,7 @@ export async function getMessages(otherUserId: number): Promise<Message[]> {
   }
 }
 
-export async function getConversations() {
+export const getConversations = cache(async () => {
   const session = await auth();
   if (!session || !session.user?.id) return [];
 
@@ -897,4 +909,4 @@ export async function getConversations() {
     console.error('Error fetching conversations:', error);
     return [];
   }
-}
+});

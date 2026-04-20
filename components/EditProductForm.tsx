@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition, type ChangeEvent, type FormEvent } from "react";
+import { useState, useActionState, useEffect, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { updateProduct } from "@/lib/actions";
+import { updateProduct, type ActionState } from "@/lib/actions";
 import { validatePrice, formatPrice, parsePrice } from "@/lib/currency";
+import { toast } from "sonner";
 
 interface Product {
   id: number;
@@ -24,9 +25,18 @@ const CATEGORIES = [
   { group: "Other", options: ["Other"] }
 ];
 
+const initialState: ActionState = {
+  error: undefined,
+  success: false,
+};
+
 export default function EditProductForm({ product }: { product: Product }) {
   const isCustomCategory = !CATEGORIES.flatMap(c => c.options).includes(product.category);
   
+  // Create a bound version of updateProduct that includes the productId
+  const updateProductWithId = updateProduct.bind(null, product.id);
+  const [state, formAction, isPending] = useActionState(updateProductWithId, initialState);
+
   const [name, setName] = useState(product.name || "");
   const [category, setCategory] = useState(isCustomCategory ? "Other" : product.category);
   const [otherCategory, setOtherCategory] = useState(isCustomCategory ? product.category : "");
@@ -35,9 +45,16 @@ export default function EditProductForm({ product }: { product: Product }) {
   const [price, setPrice] = useState(product.price.replace(/[^\d.,]/g, ''));
   const [priceError, setPriceError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  useEffect(() => {
+    if (state.success) {
+      toast.success("Product updated successfully!");
+      router.push(`/products/${product.id}`);
+    } else if (state.error) {
+      toast.error(state.error);
+    }
+  }, [state, router, product.id]);
 
   const showOtherCategoryInput = category === "Other";
   const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
@@ -77,34 +94,21 @@ export default function EditProductForm({ product }: { product: Product }) {
     setFileError(null);
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    
+  const handleSubmit = (formData: FormData) => {
     if (fileError || priceError) {
+      toast.error("Please fix errors before submitting.");
       return;
     }
-
-    setSubmitError(null);
-    const formData = new FormData(event.currentTarget);
     
     // Normalize and format the price before submission
     const normalizedPrice = formatPrice(price);
     formData.set('price', normalizedPrice);
     
-    const result = await updateProduct(product.id, formData);
-
-    if (result?.error) {
-      setSubmitError(result.error);
-      return;
-    }
-
-    startTransition(() => {
-      router.push(`/products/${product.id}`);
-    });
+    formAction(formData);
   };
 
   return (
-    <form encType="multipart/form-data" onSubmit={handleSubmit} className="space-y-6">
+    <form action={handleSubmit} className="space-y-6">
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-1">
           Product Name
@@ -261,12 +265,6 @@ export default function EditProductForm({ product }: { product: Product }) {
         <p className="mt-2 text-xs text-zinc-500 italic">Upload a new photo only if you want to replace the current one.</p>
         {fileError && <p className="mt-2 text-xs font-semibold text-red-600">{fileError}</p>}
       </div>
-
-      {submitError && (
-        <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm font-medium text-red-700">
-          {submitError}
-        </div>
-      )}
 
       <div className="pt-4 flex gap-4">
         <button

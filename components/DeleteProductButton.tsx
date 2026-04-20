@@ -9,6 +9,8 @@ interface DeleteProductButtonProps {
   variant?: 'icon' | 'full';
 }
 
+import { toast } from 'sonner';
+
 export default function DeleteProductButton({ productId, variant = 'icon' }: DeleteProductButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
@@ -26,8 +28,9 @@ export default function DeleteProductButton({ productId, variant = 'icon' }: Del
     setIsDeleting(false);
 
     if (result?.error) {
-      alert(result.error);
+      toast.error(result.error);
     } else {
+      toast.success('Product removed!');
       if (variant === 'full') {
         router.push('/shop');
       } else {

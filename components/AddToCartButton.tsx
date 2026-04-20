@@ -4,14 +4,14 @@ import { useState } from 'react';
 import { addToCart } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
 
+import { toast } from 'sonner';
+
 export default function AddToCartButton({ productId }: { productId: number }) {
   const [isPending, setIsPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleAddToCart() {
     setIsPending(true);
-    setMessage(null);
     
     const result = await addToCart(productId);
     
@@ -20,11 +20,10 @@ export default function AddToCartButton({ productId }: { productId: number }) {
       if (result.error === 'Not authenticated') {
         router.push('/login');
       } else {
-        setMessage(result.error);
+        toast.error(result.error);
       }
     } else {
-      setMessage('Added to cart!');
-      setTimeout(() => setMessage(null), 3000);
+      toast.success('Added to cart!');
     }
   }
 
@@ -37,11 +36,6 @@ export default function AddToCartButton({ productId }: { productId: number }) {
       >
         {isPending ? 'Adding...' : 'Add to Cart'}
       </button>
-      {message && (
-        <p className={`mt-2 text-center text-sm font-medium ${message.includes('Added') ? 'text-green-600' : 'text-red-600'}`}>
-          {message}
-        </p>
-      )}
     </div>
   );
 }

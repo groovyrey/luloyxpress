@@ -1,8 +1,30 @@
-import { register } from '@/lib/actions';
+'use client';
+
+import { register, type ActionState } from '@/lib/actions';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useActionState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+
+const initialState: ActionState = {
+  error: undefined,
+  success: false,
+};
 
 export default function RegisterPage() {
+  const [state, formAction, isPending] = useActionState(register, initialState);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state?.success) {
+      toast.success('Registration successful! Please sign in.');
+      router.push('/login');
+    } else if (state?.error) {
+      toast.error(state.error);
+    }
+  }, [state, router]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-2xl shadow-sm border border-zinc-100">
@@ -29,7 +51,7 @@ export default function RegisterPage() {
           </p>
         </div>
         <form 
-          action={register}
+          action={formAction}
           className="mt-8 space-y-6"
         >
           <div className="space-y-4 rounded-md shadow-sm">
@@ -78,9 +100,10 @@ export default function RegisterPage() {
           <div>
             <button
               type="submit"
-              className="group relative flex w-full justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2"
+              disabled={isPending}
+              className="group relative flex w-full justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign up
+              {isPending ? 'Signing up...' : 'Sign up'}
             </button>
           </div>
         </form>

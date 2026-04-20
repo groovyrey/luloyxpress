@@ -4,26 +4,26 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { buyNow } from "@/lib/actions";
 
+import { toast } from "sonner";
+
 export default function BuyNowButton({ productId, balance, price }: { productId: number, balance: string, price: number }) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("wallet");
   const router = useRouter();
 
   const handleBuyNow = async () => {
-    setError(null);
     const result = await buyNow(productId, paymentMethod);
 
     if (result.error) {
-      setError(result.error);
+      toast.error(result.error);
       return;
     }
 
     if (paymentMethod !== 'wallet') {
-      alert(`Order placed successfully via ${paymentMethod === 'card' ? 'Credit Card' : 'GCash/Maya'}!`);
+      toast.success(`Order placed successfully via ${paymentMethod === 'card' ? 'Credit Card' : 'GCash/Maya'}!`);
     } else {
-      alert("Purchase successful! Thank you for your order.");
+      toast.success("Purchase successful! Thank you for your order.");
     }
     
     startTransition(() => {
@@ -99,12 +99,6 @@ export default function BuyNowButton({ productId, balance, price }: { productId:
             {isPending ? "Processing..." : isBalanceLow ? "Insufficient Balance" : `Pay ₱${price.toLocaleString()}`}
           </button>
         </div>
-      )}
-      
-      {error && (
-        <p className="mt-2 text-center text-xs font-semibold text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">
-          {error}
-        </p>
       )}
     </div>
   );

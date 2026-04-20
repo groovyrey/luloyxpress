@@ -16,8 +16,9 @@ interface ProductRow extends RowDataPacket {
   created_at: Date;
 }
 
-async function getProducts(category?: string, search?: string) {
+async function getProducts(category?: string, search?: string, page: number = 1, limit: number = 12) {
   try {
+    const offset = (page - 1) * limit;
     let query = `
       SELECT p.*, u.name as seller_name, u.account_type as seller_tier
       FROM products p 
@@ -40,14 +41,75 @@ async function getProducts(category?: string, search?: string) {
       ORDER BY 
         CASE WHEN u.account_type = 'pro' THEN 0 ELSE 1 END,
         p.created_at DESC
+      LIMIT ? OFFSET ?
     `;
+    params.push(limit, offset);
 
     const [rows] = await pool.query<ProductRow[]>(query, params);
-    return rows;
+
+    // Get total count for pagination
+    let countQuery = "SELECT COUNT(*) as total FROM products WHERE 1=1";
+    const countParams: any[] = [];
+    if (category && category !== 'All') {
+      countQuery += " AND category = ?";
+      countParams.push(category);
+    }
+    if (search) {
+      countQuery += " AND (name LIKE ? OR description LIKE ?)";
+      countParams.push(`%${search}%`, `%${search}%`);
+    }
+    const [countRows]: any = await pool.query(countQuery, countParams);
+    const total = countRows[0].total;
+
+    return { products: rows, total, totalPages: Math.ceil(total / limit) };
   } catch (error) {
     console.error("Database query error:", error);
-    return [];
+    return { products: [], total: 0, totalPages: 0 };
   }
+}
+
+function Pagination({ currentPage, totalPages, category, search }: { currentPage: number, totalPages: number, category?: string, search?: string }) {
+  if (totalPages <= 1) return null;
+
+  const getPageLink = (p: number) => {
+    const params = new URLSearchParams();
+    if (category && category !== 'All') params.set('category', category);
+    if (search) params.set('q', search);
+    params.set('page', p.toString());
+    return `/shop?${params.toString()}`;
+  };
+
+  return (
+    <div className="mt-16 flex items-center justify-center gap-2">
+      {currentPage > 1 && (
+        <Link href={getPageLink(currentPage - 1)} className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-bold hover:bg-zinc-50 transition-colors">
+          Previous
+        </Link>
+      )}
+      <div className="flex gap-1 overflow-x-auto max-w-[200px] sm:max-w-none pb-2 sm:pb-0">
+        {[...Array(totalPages)].map((_, i) => {
+          const p = i + 1;
+          const isActive = p === currentPage;
+          return (
+            <Link 
+              key={p} 
+              href={getPageLink(p)}
+              className={`h-10 w-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all flex-shrink-0 ${
+                isActive ? 'bg-zinc-900 text-white shadow-lg' : 'bg-white text-zinc-500 border border-zinc-200 hover:border-zinc-400'
+              }`}
+            >
+              {p}
+            </Link>
+          );
+        })}
+      </div>
+      {currentPage < totalPages && (
+        <Link href={getPageLink(currentPage + 1)} className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-bold hover:bg-zinc-50 transition-colors">
+          Next
+        </Link>
+      )}
+    </div>
+  );
 }
 
 async function getUniqueCategories() {
@@ -118,10 +180,11 @@ function ProductCard({ product }: { product: ProductRow }) {
   );
 }
 
-export default async function ShopPage({ searchParams }: { searchParams: Promise<{ category?: string; q?: string }> }) {
-  const { category: selectedCategory, q: searchQuery } = await searchParams;
+export default async function ShopPage({ searchParams }: { searchParams: Promise<{ category?: string; q?: string; page?: string }> }) {
+  const { category: selectedCategory, q: searchQuery, page: pageStr } = await searchParams;
+  const currentPage = parseInt(pageStr || '1');
   const categories = await getUniqueCategories();
-  const allProducts = await getProducts(selectedCategory, searchQuery);
+  const { products: allProducts, totalPages } = await getProducts(selectedCategory, searchQuery, currentPage);
 
   // Grouping products by category if no specific category is selected and no search query
   const productsByCategory: Record<string, ProductRow[]> = {};
@@ -191,20 +254,30 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
         </div>
 
         {allProducts.length === 0 ? (
-          <div className="text-center py-32 bg-zinc-50 rounded-3xl border-2 border-dashed border-zinc-100">
-            <h3 className="text-2xl font-bold text-zinc-900">{searchQuery ? 'No matches found' : 'No items available'}</h3>
-            <p className="mt-2 text-zinc-500 max-w-xs mx-auto">
-              {searchQuery ? `We couldn't find anything for "${searchQuery}". Try different keywords.` : 'There are currently no products in this category. Check back soon or list your own!'}
+          <div className="text-center py-32 bg-zinc-50 rounded-[3rem] border-2 border-dashed border-zinc-200">
+            <div className="mx-auto w-24 h-24 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </div>
+            <h3 className="text-3xl font-black text-zinc-900 tracking-tight">{searchQuery ? 'No matches found' : 'Nothing here yet'}</h3>
+            <p className="mt-3 text-zinc-500 max-w-sm mx-auto text-lg">
+              {searchQuery ? `We couldn't find anything for "${searchQuery}". Maybe try a broader search or browse categories.` : 'This category is currently empty. Be the first to list something or explore other sections!'}
             </p>
-            {searchQuery ? (
-              <Link href="/shop" className="mt-8 inline-block rounded-full bg-zinc-900 px-8 py-3 text-sm font-bold text-white hover:bg-black transition-all">
-                Clear Search
-              </Link>
-            ) : (
-              <Link href="/sell" className="mt-8 inline-block rounded-full bg-blue-600 px-8 py-3 text-sm font-bold text-white hover:bg-blue-700 transition-all">
-                Start Selling
-              </Link>
-            )}
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+              {searchQuery ? (
+                <Link href="/shop" className="rounded-full bg-zinc-900 px-10 py-4 text-base font-bold text-white hover:bg-black transition-all shadow-xl shadow-zinc-200">
+                  Clear Search
+                </Link>
+              ) : (
+                <>
+                  <Link href="/sell" className="rounded-full bg-blue-600 px-10 py-4 text-base font-bold text-white hover:bg-blue-700 transition-all shadow-xl shadow-blue-200">
+                    Start Selling
+                  </Link>
+                  <Link href="/shop" className="rounded-full bg-white border border-zinc-200 px-10 py-4 text-base font-bold text-zinc-900 hover:bg-zinc-50 transition-all">
+                    Browse All
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         ) : (
           <div className="space-y-24">
@@ -240,6 +313,13 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
             )}
           </div>
         )}
+
+        <Pagination 
+          currentPage={currentPage} 
+          totalPages={totalPages} 
+          category={selectedCategory} 
+          search={searchQuery} 
+        />
       </div>
     </div>
   );

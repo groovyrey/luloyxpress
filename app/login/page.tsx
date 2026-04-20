@@ -1,8 +1,24 @@
-import { loginAction } from '@/lib/actions';
+'use client';
+
+import { loginAction, type ActionState } from '@/lib/actions';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useActionState, useEffect } from 'react';
+import { toast } from 'sonner';
+
+const initialState: ActionState = {
+  error: undefined,
+};
 
 export default function LoginPage() {
+  const [state, formAction, isPending] = useActionState(loginAction, initialState);
+
+  useEffect(() => {
+    if (state?.error) {
+      toast.error(state.error);
+    }
+  }, [state]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-2xl shadow-sm border border-zinc-100">
@@ -29,7 +45,7 @@ export default function LoginPage() {
           </p>
         </div>
         <form 
-          action={loginAction}
+          action={formAction}
           className="mt-8 space-y-6"
         >
           <div className="space-y-4 rounded-md shadow-sm">
@@ -66,9 +82,10 @@ export default function LoginPage() {
           <div>
             <button
               type="submit"
-              className="group relative flex w-full justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2"
+              disabled={isPending}
+              className="group relative flex w-full justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign in
+              {isPending ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
         </form>

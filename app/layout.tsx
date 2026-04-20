@@ -3,19 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { auth } from "@/auth";
-import { getCartCount } from "@/lib/actions";
-import pool from "@/lib/db";
-import { RowDataPacket } from "mysql2";
 import LiveUpdatesProvider from "@/components/LiveUpdatesProvider";
-
-async function getUserBalance(userId: string) {
-  try {
-    const [rows] = await pool.query<RowDataPacket[]>("SELECT balance FROM users WHERE id = ?", [userId]);
-    return rows[0]?.balance || "0";
-  } catch {
-    return "0";
-  }
-}
+import { Suspense } from "react";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,8 +31,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await auth();
-  const cartCount = await getCartCount();
-  const balance = session?.user?.id ? await getUserBalance(session.user.id) : "0";
 
   return (
     <html
@@ -52,11 +40,14 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-white">
         <LiveUpdatesProvider
           userId={session?.user?.id}
-          initialCartCount={cartCount}
-          initialBalance={balance}
+          initialCartCount={0}
+          initialBalance="0"
         >
-          <Navbar />
+          <Suspense fallback={<div className="h-16 border-b border-zinc-200 bg-white/80 backdrop-blur-md" />}>
+            <Navbar />
+          </Suspense>
           {children}
+          <Toaster position="top-center" richColors />
         </LiveUpdatesProvider>
       </body>
     </html>
