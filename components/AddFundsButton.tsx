@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { addFunds } from '@/lib/actions';
+import { parsePriceToDecimal } from '@/lib/currency';
 
 export default function AddFundsButton() {
   const [isPending, setIsPending] = useState(false);
@@ -9,21 +10,22 @@ export default function AddFundsButton() {
   const [error, setError] = useState<string | null>(null);
 
   async function handleAddFunds() {
-    const numAmount = parseFloat(amount);
+    const decimalAmount = parsePriceToDecimal(amount);
     
-    if (isNaN(numAmount) || numAmount < 500) {
+    if (isNaN(decimalAmount) || decimalAmount < 500) {
       setError('Minimum top-up is ₱500');
       return;
     }
 
-    if (numAmount > 1000000) {
+    if (decimalAmount > 1000000) {
       setError('Maximum top-up is ₱1,000,000');
       return;
     }
 
     setError(null);
     setIsPending(true);
-    const result = await addFunds(numAmount);
+    // Send numeric value but addFunds logic inside handles it as Decimal
+    const result = await addFunds(decimalAmount);
     setIsPending(false);
     
     if (result.success) {

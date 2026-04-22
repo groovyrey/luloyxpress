@@ -9,12 +9,11 @@ import { revalidatePath } from 'next/cache';
 import cloudinary from '@/lib/cloudinary';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
-import { validatePrice } from '@/lib/currency';
+import { validatePrice, parsePriceToDecimal, formatPrice } from '@/lib/currency';
 import { ably } from '@/lib/ably';
 
 interface UserRow extends RowDataPacket {
-// ...
-
+  id: number;
   name: string;
   email: string;
   password?: string;
@@ -44,6 +43,37 @@ interface CartItemRow extends RowDataPacket {
 
 interface CloudinaryUploadResult {
   secure_url: string;
+}
+
+interface OrderRow extends RowDataPacket {
+  id: number;
+  buyer_id: number;
+  total_amount: string;
+  status: string;
+  payment_method: string;
+  created_at: Date;
+}
+
+interface OrderItemRow extends RowDataPacket {
+  id: number;
+  order_id: number;
+  product_id: number;
+  seller_id: number;
+  product_name_at_purchase: string;
+  price: string;
+  quantity: number;
+}
+
+export interface ReviewRow extends RowDataPacket {
+  id: number;
+  order_id: number;
+  product_id: number;
+  reviewer_id: number;
+  reviewer_name: string;
+  seller_id: number;
+  rating: number;
+  comment: string;
+  created_at: Date;
 }
 
 export type ActionState = {
@@ -85,13 +115,14 @@ async function logTransaction(
   connection: PoolConnection,
   userId: number,
   type: 'deposit' | 'purchase' | 'sale' | 'membership_fee' | 'withdrawal',
-  amount: number,
+  amount: string | number,
   description: string,
   referenceId?: number
 ) {
+  const amountNum = parsePriceToDecimal(amount);
   await connection.query(
     'INSERT INTO transactions (user_id, type, amount, description, reference_id) VALUES (?, ?, ?, ?, ?)',
-    [userId, type, amount, description, referenceId || null]
+    [userId, type, amountNum.toFixed(2), description, referenceId || null]
   );
 }
 
@@ -119,14 +150,14 @@ export async function updateMembership(formData: FormData) {
     // 2. If upgrading to pro, check balance and deduct 499
     if (accountType === 'pro' && currentUser.account_type !== 'pro') {
       const proCost = 499;
-      const balance = parseFloat(currentUser.balance);
+      const balance = parsePriceToDecimal(currentUser.balance);
 
       if (balance < proCost) {
-        throw new Error(`Insufficient balance for Pro upgrade. Cost: ₱${proCost}, Current Balance: ₱${balance.toLocaleString()}`);
+        throw new Error(`Insufficient balance for Pro upgrade. Cost: ₱${proCost.toFixed(2)}, Current Balance: ₱${formatPrice(balance)}`);
       }
 
       // Deduct from balance
-      await connection.query('UPDATE users SET balance = balance - ? WHERE id = ?', [proCost, session.user.id]);
+      await connection.query('UPDATE users SET balance = balance - ? WHERE id = ?', [proCost.toFixed(2), session.user.id]);
 
       // Log transaction
       await logTransaction(
@@ -220,11 +251,11 @@ export async function createProduct(prevState: ActionState, formData: FormData):
     return { error: 'Not authenticated' };
   }
 
-  // Ensure price starts with ₱
-  const price = rawPrice.startsWith('₱') ? rawPrice : `₱${rawPrice}`;
+  // Parse price to numeric value for DECIMAL field
+  const price = parsePriceToDecimal(rawPrice).toFixed(2);
 
   // Server-side price validation
-  const priceValidation = validatePrice(price, { min: 1, max: 10000000 });
+  const priceValidation = validatePrice(rawPrice, { min: 1, max: 10000000 });
   if (!priceValidation.isValid) {
     return { error: priceValidation.error };
   }
@@ -307,11 +338,11 @@ export async function updateProduct(productId: number, prevState: ActionState, f
     return { error: 'Not authenticated' };
   }
 
-  // Ensure price starts with ₱
-  const price = rawPrice.startsWith('₱') ? rawPrice : `₱${rawPrice}`;
+  // Parse price to numeric value for DECIMAL field
+  const price = parsePriceToDecimal(rawPrice).toFixed(2);
 
   // Server-side price validation
-  const priceValidation = validatePrice(price, { min: 1, max: 10000000 });
+  const priceValidation = validatePrice(rawPrice, { min: 1, max: 10000000 });
   if (!priceValidation.isValid) {
     return { error: priceValidation.error };
   }
@@ -412,7 +443,9 @@ export async function deleteProduct(productId: number) {
       }
     }
 
-    // First delete from cart_items to avoid foreign key issues
+    // First delete from reviews and cart_items to avoid foreign key issues
+    // (Though ON DELETE CASCADE should handle this if schema was updated)
+    await pool.query('DELETE FROM reviews WHERE product_id = ?', [productId]);
     await pool.query('DELETE FROM cart_items WHERE product_id = ?', [productId]);
 
     // Then delete the product
@@ -432,10 +465,6 @@ export async function deleteProduct(productId: number) {
   }
 }
 
-// Helper to parse price string like "₱4,500.00" to number
-function parsePrice(priceStr: string): number {
-  return parseFloat(priceStr.replace(/[^\d.]/g, ''));
-}
 
 export async function addToCart(productId: number) {
   const session = await auth();
@@ -544,24 +573,25 @@ export async function checkout(selectedCartItemIds?: number[], paymentMethod: st
     // 2. Calculate total
     let total = 0;
     for (const item of cartItems) {
-      total += parsePrice(item.price_str || '0') * item.quantity;
+      const itemPrice = parsePriceToDecimal(item.price_str || '0');
+      total += itemPrice * item.quantity;
     }
 
     // 3. Check buyer balance
     const [userRows] = await connection.query<UserRow[]>('SELECT balance FROM users WHERE id = ?', [session.user.id]);
-    const balance = parseFloat(userRows[0].balance);
+    const balance = parsePriceToDecimal(userRows[0].balance);
 
     if (balance < total) {
-      throw new Error(`Insufficient balance. Total: ₱${total.toLocaleString()}, Balance: ₱${balance.toLocaleString()}`);
+      throw new Error(`Insufficient balance. Total: ₱${total.toFixed(2)}, Balance: ₱${formatPrice(balance)}`);
     }
 
     // 4. Deduct from buyer
-    await connection.query('UPDATE users SET balance = balance - ? WHERE id = ?', [total, session.user.id]);
+    await connection.query('UPDATE users SET balance = balance - ? WHERE id = ?', [total.toFixed(2), session.user.id]);
 
     // 5. Create order with payment method
     const [orderResult] = await connection.query<ResultSetHeader>(
       'INSERT INTO orders (buyer_id, total_amount, status, payment_method) VALUES (?, ?, ?, ?)',
-      [session.user.id, total, 'completed', paymentMethod]
+      [session.user.id, total.toFixed(2), 'completed', paymentMethod]
     );
     const orderId = orderResult.insertId;
 
@@ -577,17 +607,17 @@ export async function checkout(selectedCartItemIds?: number[], paymentMethod: st
 
     // 6. Process each item (Add to seller, Create order item)
     for (const item of cartItems) {
-      const itemSubtotal = parsePrice(item.price_str || '0') * item.quantity;
+      const itemPrice = parsePriceToDecimal(item.price_str || '0');
+      const itemSubtotal = itemPrice * item.quantity;
       
       // Add to seller balance
-      await connection.query('UPDATE users SET balance = balance + ? WHERE id = ?', [itemSubtotal, item.seller_id]);
+      await connection.query('UPDATE users SET balance = balance + ? WHERE id = ?', [itemSubtotal.toFixed(2), item.seller_id]);
 
       // Record order item
       await connection.query(
-        'INSERT INTO order_items (order_id, product_id, seller_id, price, quantity) VALUES (?, ?, ?, ?, ?)',
-        [orderId, item.product_id, item.seller_id, parsePrice(item.price_str || '0'), item.quantity]
+        'INSERT INTO order_items (order_id, product_id, seller_id, product_name_at_purchase, price, quantity) VALUES (?, ?, ?, ?, ?, ?)',
+        [orderId, item.product_id, item.seller_id, item.name, itemPrice.toFixed(2), item.quantity]
       );
-
       // Log seller sale
       await logTransaction(
         connection,
@@ -647,14 +677,15 @@ export async function addFunds(amount: number) {
   try {
     await connection.beginTransaction();
 
-    await connection.query('UPDATE users SET balance = balance + ? WHERE id = ?', [amount, session.user.id]);
+    const decimalAmount = amount.toFixed(2);
+    await connection.query('UPDATE users SET balance = balance + ? WHERE id = ?', [decimalAmount, session.user.id]);
 
     // Log transaction
     await logTransaction(
       connection,
       parseInt(session.user.id),
       'deposit',
-      amount,
+      decimalAmount,
       'Added funds to wallet'
     );
 
@@ -698,23 +729,23 @@ export async function buyNow(productId: number, paymentMethod: string = 'wallet'
     }
 
     const product = products[0];
-    const price = parsePrice(product.price);
+    const price = parsePriceToDecimal(product.price);
 
     // 2. Check buyer balance
     const [userRows] = await connection.query<UserRow[]>('SELECT balance FROM users WHERE id = ?', [session.user.id]);
-    const balance = parseFloat(userRows[0].balance);
+    const balance = parsePriceToDecimal(userRows[0].balance);
 
     if (balance < price) {
-      throw new Error(`Insufficient balance. Price: ₱${price.toLocaleString()}, Balance: ₱${balance.toLocaleString()}`);
+      throw new Error(`Insufficient balance. Price: ₱${price.toFixed(2)}, Balance: ₱${formatPrice(balance)}`);
     }
 
     // 3. Deduct from buyer
-    await connection.query('UPDATE users SET balance = balance - ? WHERE id = ?', [price, session.user.id]);
+    await connection.query('UPDATE users SET balance = balance - ? WHERE id = ?', [price.toFixed(2), session.user.id]);
 
     // 4. Create order with payment method
     const [orderResult] = await connection.query<ResultSetHeader>(
       'INSERT INTO orders (buyer_id, total_amount, status, payment_method) VALUES (?, ?, ?, ?)',
-      [session.user.id, price, 'completed', paymentMethod]
+      [session.user.id, price.toFixed(2), 'completed', paymentMethod]
     );
     const orderId = orderResult.insertId;
 
@@ -729,7 +760,7 @@ export async function buyNow(productId: number, paymentMethod: string = 'wallet'
     );
 
     // 5. Add to seller balance
-    await connection.query('UPDATE users SET balance = balance + ? WHERE id = ?', [price, product.seller_id]);
+    await connection.query('UPDATE users SET balance = balance + ? WHERE id = ?', [price.toFixed(2), product.seller_id]);
 
     // Log seller sale
     await logTransaction(
@@ -743,8 +774,8 @@ export async function buyNow(productId: number, paymentMethod: string = 'wallet'
 
     // 6. Record order item
     await connection.query(
-      'INSERT INTO order_items (order_id, product_id, seller_id, price, quantity) VALUES (?, ?, ?, ?, ?)',
-      [orderId, product.id, product.seller_id, price, 1]
+      'INSERT INTO order_items (order_id, product_id, seller_id, product_name_at_purchase, price, quantity) VALUES (?, ?, ?, ?, ?, ?)',
+      [orderId, product.id, product.seller_id, product.name, price.toFixed(2), 1]
     );
 
     await connection.commit();
@@ -908,5 +939,169 @@ export const getConversations = cache(async () => {
   } catch (error) {
     console.error('Error fetching conversations:', error);
     return [];
+  }
+});
+
+export async function createReview(prevState: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await auth();
+  if (!session || !session.user?.id) return { error: 'Not authenticated' };
+
+  const orderId = formData.get('order_id') as string;
+  const productId = formData.get('product_id') as string;
+  const rating = parseInt(formData.get('rating') as string);
+  const comment = formData.get('comment') as string;
+
+  if (!orderId || !productId || !rating || isNaN(rating) || rating < 1 || rating > 5) {
+    return { error: 'Invalid rating data' };
+  }
+
+  try {
+    // 1. Get order and verify ownership
+    const [orders] = await pool.query<OrderRow[]>(
+      'SELECT buyer_id FROM orders WHERE id = ?',
+      [orderId]
+    );
+
+    if (orders.length === 0) return { error: 'Order not found' };
+    if (orders[0].buyer_id !== parseInt(session.user.id)) return { error: 'Unauthorized' };
+
+    // 2. Verify product is in order and get seller_id
+    const [orderItems] = await pool.query<OrderItemRow[]>(
+      'SELECT seller_id FROM order_items WHERE order_id = ? AND product_id = ? LIMIT 1',
+      [orderId, productId]
+    );
+    
+    if (orderItems.length === 0) return { error: 'Product not found in this order' };
+    const sellerId = orderItems[0].seller_id;
+
+    // 3. Insert review
+    await pool.query(
+      'INSERT INTO reviews (order_id, product_id, reviewer_id, seller_id, rating, comment) VALUES (?, ?, ?, ?, ?, ?)',
+      [orderId, productId, session.user.id, sellerId, rating, comment]
+    );
+
+    revalidatePath(`/products/${productId}`);
+    revalidatePath(`/profile/${sellerId}`);
+    revalidatePath(`/receipt/${orderId}`);
+    
+    return { success: true };
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
+      return { error: 'You have already reviewed this product' };
+    }
+    console.error('Error creating review:', error);
+    return { error: 'Failed to submit review' };
+  }
+}
+
+export const getProductReviews = cache(async (productId: string): Promise<ReviewRow[]> => {
+  try {
+    const [rows] = await pool.query<ReviewRow[]>(
+      `SELECT r.*, u.name as reviewer_name 
+       FROM reviews r 
+       JOIN users u ON r.reviewer_id = u.id 
+       WHERE r.product_id = ? 
+       ORDER BY r.created_at DESC`,
+      [productId]
+    );
+    return rows;
+  } catch (error) {
+    console.error('Error fetching product reviews:', error);
+    return [];
+  }
+});
+
+export const getProductRating = cache(async (productId: string) => {
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT AVG(rating) as average, COUNT(*) as count FROM reviews WHERE product_id = ?',
+      [productId]
+    );
+    return {
+      average: parseFloat(rows[0].average || '0'),
+      count: rows[0].count || 0
+    };
+  } catch (error) {
+    console.error('Error fetching product rating:', error);
+    return { average: 0, count: 0 };
+  }
+});
+
+export const getSellerReviews = cache(async (sellerId: string): Promise<(ReviewRow & { product_name: string })[]> => {
+  try {
+    const [rows] = await pool.query<(ReviewRow & { product_name: string })[]>(
+      `SELECT r.*, u.name as reviewer_name, p.name as product_name
+       FROM reviews r 
+       JOIN users u ON r.reviewer_id = u.id 
+       JOIN products p ON r.product_id = p.id
+       WHERE r.seller_id = ? 
+       ORDER BY r.created_at DESC`,
+      [sellerId]
+    );
+    return rows;
+  } catch (error) {
+    console.error('Error fetching seller reviews:', error);
+    return [];
+  }
+});
+
+export const getSellerRating = cache(async (sellerId: string) => {
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT AVG(rating) as average, COUNT(*) as count FROM reviews WHERE seller_id = ?',
+      [sellerId]
+    );
+    return {
+      average: parseFloat(rows[0].average || '0'),
+      count: rows[0].count || 0
+    };
+  } catch (error) {
+    console.error('Error fetching seller rating:', error);
+    return { average: 0, count: 0 };
+  }
+});
+
+export const getReviewForOrder = cache(async (orderId: number, productId?: number): Promise<ReviewRow | null> => {
+  try {
+    let query = 'SELECT * FROM reviews WHERE order_id = ?';
+    const params: (number | string)[] = [orderId];
+    
+    if (productId) {
+      query += ' AND product_id = ?';
+      params.push(productId);
+    }
+
+    const [rows] = await pool.query<ReviewRow[]>(query, params);
+    return rows[0] || null;
+  } catch {
+    return null;
+  }
+});
+
+export const getEligibleOrderForReview = cache(async (userId: string, productId: string): Promise<number | null> => {
+  try {
+    // 1. Check if the user has already reviewed this product (any order)
+    const [existingReviews] = await pool.query<RowDataPacket[]>(
+      'SELECT id FROM reviews WHERE reviewer_id = ? AND product_id = ? LIMIT 1',
+      [userId, productId]
+    );
+    
+    if (existingReviews.length > 0) {
+      return null;
+    }
+
+    // 2. Find a completed order that contains this product
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT oi.order_id 
+       FROM order_items oi
+       JOIN orders o ON oi.order_id = o.id
+       WHERE o.buyer_id = ? AND oi.product_id = ? AND o.status = 'completed'
+       LIMIT 1`,
+      [userId, productId]
+    );
+    return rows[0]?.order_id || null;
+  } catch (error) {
+    console.error('Error checking review eligibility:', error);
+    return null;
   }
 });

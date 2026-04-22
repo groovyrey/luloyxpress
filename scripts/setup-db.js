@@ -38,7 +38,7 @@ async function setupDatabase() {
       CREATE TABLE IF NOT EXISTS products (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        price VARCHAR(50) NOT NULL,
+        price DECIMAL(10, 2) NOT NULL,
         category VARCHAR(100),
         image TEXT,
         description TEXT,
@@ -59,7 +59,7 @@ async function setupDatabase() {
         quantity INT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (product_id) REFERENCES products(id)
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
       )
     `);
 
@@ -84,10 +84,11 @@ async function setupDatabase() {
         order_id INT,
         product_id INT,
         seller_id INT,
+        product_name_at_purchase VARCHAR(255),
         price DECIMAL(10, 2),
         quantity INT,
         FOREIGN KEY (order_id) REFERENCES orders(id),
-        FOREIGN KEY (product_id) REFERENCES products(id),
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
         FOREIGN KEY (seller_id) REFERENCES users(id)
       )
     `);
@@ -104,6 +105,26 @@ async function setupDatabase() {
         reference_id INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+
+    // Create reviews table
+    console.log('Creating reviews table...');
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        order_id INT NOT NULL,
+        product_id INT NOT NULL,
+        reviewer_id INT NOT NULL,
+        seller_id INT NOT NULL,
+        rating TINYINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        comment TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(reviewer_id, product_id),
+        FOREIGN KEY (order_id) REFERENCES orders(id),
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (reviewer_id) REFERENCES users(id),
+        FOREIGN KEY (seller_id) REFERENCES users(id)
       )
     `);
 

@@ -4,6 +4,7 @@ import pool from "@/lib/db";
 import ChatClient from "@/components/ChatClient";
 import { getMessages } from "@/lib/actions";
 import { RowDataPacket } from "mysql2";
+import { formatPrice } from "@/lib/currency";
 
 async function getOtherUser(userId: string) {
   try {
@@ -67,7 +68,7 @@ export default async function ChatPage({
           productContext={product ? {
             id: product.id,
             name: product.name,
-            price: product.price,
+            price: formatPrice(product.price),
             image: product.image
           } : undefined}
         />

@@ -3,7 +3,7 @@
 import { useState, useActionState, useEffect, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct, type ActionState } from "@/lib/actions";
-import { validatePrice, formatPrice, parsePrice } from "@/lib/currency";
+import { validatePrice, formatPrice, parsePriceToDecimal } from "@/lib/currency";
 import { toast } from "sonner";
 
 const initialState: ActionState = {
@@ -16,7 +16,46 @@ export default function SellProductForm() {
   const [category, setCategory] = useState("Men's Apparel");
   const [otherCategory, setOtherCategory] = useState("");
   const [tags, setTags] = useState("");
+  const [tagInput, setTagInput] = useState("");
+  const [tagList, setTagList] = useState<string[]>([]);
   const [description, setDescription] = useState("");
+
+  const addTag = (value: string) => {
+    const cleanTag = value.trim().replace(/,/g, "");
+    if (!cleanTag) return;
+    
+    const formattedTag = cleanTag.startsWith("#") ? cleanTag : `#${cleanTag}`;
+    if (!tagList.includes(formattedTag)) {
+      const newTagList = [...tagList, formattedTag];
+      setTagList(newTagList);
+      setTags(newTagList.join(", "));
+    }
+    setTagInput("");
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    const newTagList = tagList.filter(tag => tag !== tagToRemove);
+    setTagList(newTagList);
+    setTags(newTagList.join(", "));
+  };
+
+  const handleTagInput = (value: string) => {
+    // If the user typed a space or comma, add the tag immediately
+    if (value.endsWith(" ") || value.endsWith(",")) {
+      addTag(value.slice(0, -1));
+    } else {
+      setTagInput(value);
+    }
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addTag(tagInput);
+    } else if (e.key === "Backspace" && !tagInput && tagList.length > 0) {
+      removeTag(tagList[tagList.length - 1]);
+    }
+  };
   const [price, setPrice] = useState("");
   const [priceError, setPriceError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -49,9 +88,9 @@ export default function SellProductForm() {
 
   const getPricePreview = (): string | null => {
     if (!price) return null;
-    const parsed = parsePrice(price);
-    if (parsed <= 0) return null;
-    return formatPrice(parsed);
+    const decimal = parsePriceToDecimal(price);
+    if (decimal <= 0) return null;
+    return formatPrice(decimal);
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -75,9 +114,9 @@ export default function SellProductForm() {
       return;
     }
     
-    // Normalize and format the price before submission
-    const normalizedPrice = formatPrice(price);
-    formData.set('price', normalizedPrice);
+    // Send clean decimal string to the server
+    const numericPrice = parsePriceToDecimal(price).toFixed(2);
+    formData.set('price', numericPrice);
     
     formAction(formData);
   };
@@ -205,24 +244,46 @@ export default function SellProductForm() {
       )}
 
       <div>
-        <label htmlFor="tags" className="block text-sm font-medium text-zinc-700 mb-1">
+        <label htmlFor="tags-input" className="block text-sm font-medium text-zinc-700 mb-1">
           Tags
         </label>
         <div className="flex items-center justify-between mb-2">
-          <span></span>
+          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Press Space or Comma to add</span>
           <span className="text-xs text-zinc-500">{tags.length}/200</span>
         </div>
-        <input
-          type="text"
-          id="tags"
-          name="tags"
-          value={tags}
-          onChange={(event) => setTags(event.target.value)}
-          maxLength={200}
-          placeholder="#secondhand, #vintage, #limited"
-          className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-        />
-        <p className="mt-2 text-xs text-zinc-500">Enter comma-separated tags. Prefix will be added automatically if missing.</p>
+        
+        <div className="flex flex-wrap gap-2 p-2 min-h-[50px] rounded-lg border border-zinc-300 bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
+          {tagList.map((tag, index) => (
+            <span 
+              key={index}
+              className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-bold animate-in zoom-in-50 duration-200 group"
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={() => removeTag(tag)}
+                className="hover:text-red-500 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </span>
+          ))}
+          <input
+            type="text"
+            id="tags-input"
+            value={tagInput}
+            onChange={(e) => handleTagInput(e.target.value)}
+            onKeyDown={handleTagKeyDown}
+            onBlur={() => addTag(tagInput)}
+            placeholder={tagList.length === 0 ? "#secondhand, #vintage..." : "Add more..."}
+            className="flex-1 min-w-[120px] bg-transparent border-none p-1 text-sm focus:outline-none focus:ring-0 text-zinc-900"
+          />
+        </div>
+        
+        {/* Hidden input to store the comma-separated string for form submission */}
+        <input type="hidden" name="tags" value={tags} />
+        
+        <p className="mt-2 text-xs text-zinc-500 italic">Example: vintage, limited, aesthetic</p>
       </div>
 
       <div>

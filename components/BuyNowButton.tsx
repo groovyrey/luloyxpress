@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { buyNow } from "@/lib/actions";
-
+import { parsePriceToDecimal, formatPrice } from "@/lib/currency";
 import { toast } from "sonner";
 
-export default function BuyNowButton({ productId, balance, price }: { productId: number, balance: string, price: number }) {
+export default function BuyNowButton({ productId, balance, price }: { productId: number, balance: string, price: string }) {
   const [isPending, startTransition] = useTransition();
   const [showPayment, setShowPayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("wallet");
@@ -35,7 +35,7 @@ export default function BuyNowButton({ productId, balance, price }: { productId:
     });
   };
 
-  const isBalanceLow = parseFloat(balance) < price;
+  const isBalanceLow = parsePriceToDecimal(balance) < parsePriceToDecimal(price);
 
   return (
     <div className="w-full space-y-4">
@@ -60,7 +60,7 @@ export default function BuyNowButton({ productId, balance, price }: { productId:
               <input type="radio" name="buyNowPayment" value="wallet" checked={paymentMethod === 'wallet'} onChange={(e) => setPaymentMethod(e.target.value)} className="h-4 w-4 text-blue-600" />
               <div className="flex-grow text-left">
                 <p className="text-xs font-bold text-zinc-900">Wallet Balance</p>
-                <p className="text-[10px] text-zinc-500 font-medium">₱{parseFloat(balance).toLocaleString()}</p>
+                <p className="text-[10px] text-zinc-500 font-medium">{formatPrice(balance)}</p>
               </div>
             </label>
 
@@ -96,7 +96,7 @@ export default function BuyNowButton({ productId, balance, price }: { productId:
             disabled={isPending || isBalanceLow}
             className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
-            {isPending ? "Processing..." : isBalanceLow ? "Insufficient Balance" : `Pay ₱${price.toLocaleString()}`}
+            {isPending ? "Processing..." : isBalanceLow ? "Insufficient Balance" : `Pay ${formatPrice(price)}`}
           </button>
         </div>
       )}

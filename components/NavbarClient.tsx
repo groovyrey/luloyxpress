@@ -6,9 +6,7 @@ import Image from "next/image";
 import { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import { useLiveUpdates } from "./LiveUpdatesProvider";
-
-import { useEffect } from "react";
-// ... existing imports
+import { formatPrice } from "@/lib/currency";
 
 export default function NavbarClient({ 
   session,
@@ -20,8 +18,6 @@ export default function NavbarClient({
   initialBalance: string;
 }) {
   const { cartCount, balance, unreadMessages, setUnreadMessages } = useLiveUpdates();
-  // We use local state for display if context is still initial "0"
-  // But actually, it's better to have LiveUpdatesProvider take these and update its state.
   
   // For now, let's assume we want to use the most "fresh" data.
   const displayCartCount = cartCount || initialCartCount;
@@ -41,6 +37,7 @@ export default function NavbarClient({
                   src="/logo.png" 
                   alt="LuloyXpress Logo" 
                   fill
+                  sizes="32px"
                   className="object-contain"
                   priority
                 />
@@ -106,7 +103,7 @@ export default function NavbarClient({
                     <Link href={`/profile/${userId}`} className="text-sm font-bold text-zinc-900 hover:text-blue-600 transition-colors">
                       Hi, {userName?.split(' ')[0]}
                     </Link>
-                    <span className="text-[11px] font-black text-blue-600">{displayBalance}</span>
+                    <span className="text-[11px] font-black text-blue-600">{formatPrice(displayBalance)}</span>
                   </div>
                   <button 
                     onClick={() => signOut({ callbackUrl: "/" })}
@@ -174,7 +171,7 @@ export default function NavbarClient({
                   >
                     Hi, {userName?.split(' ')[0]}
                   </Link>
-                  <span className="text-sm font-black text-blue-600">{displayBalance}</span>
+                  <span className="text-sm font-black text-blue-600">{formatPrice(displayBalance)}</span>
                 </div>
                 <div className="flex flex-col gap-3">
                   <button 

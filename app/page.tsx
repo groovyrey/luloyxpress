@@ -2,6 +2,7 @@ import pool from '@/lib/db';
 import Link from 'next/link';
 import Image from 'next/image';
 import { RowDataPacket } from 'mysql2';
+import ProductCard from '@/components/ProductCard';
 
 interface ProductRow extends RowDataPacket {
   id: number;
@@ -78,27 +79,12 @@ export default async function Home() {
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-12">
               {featured.map((product) => (
-                <Link key={product.id} href={`/products/${product.id}`} className="group cursor-pointer block">
-                  <div className="relative mb-4 aspect-square overflow-hidden rounded-3xl bg-white shadow-sm border border-zinc-100">
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      className="object-contain object-center transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
-                    />
-                    <div className="absolute top-4 left-4">
-                      <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">Featured</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-start gap-2 overflow-hidden">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{product.category}</p>
-                      <h3 className="mt-1 text-base font-semibold text-black truncate">{product.name}</h3>
-                    </div>
-                    <p className="mt-1 text-sm font-bold text-blue-600 whitespace-nowrap">{product.price}</p>
-                  </div>
-                </Link>
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  featured={true}
+                  showSeller={false}
+                />
               ))}
             </div>
           </div>
@@ -114,6 +100,7 @@ export default async function Home() {
                 src="/logo.png" 
                 alt="LuloyXpress Logo" 
                 fill
+                sizes="24px"
                 className="object-contain"
               />
             </div>

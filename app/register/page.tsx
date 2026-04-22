@@ -35,6 +35,7 @@ export default function RegisterPage() {
                 src="/logo.png" 
                 alt="LuloyXpress Logo" 
                 fill
+                sizes="64px"
                 className="object-contain"
                 priority
               />

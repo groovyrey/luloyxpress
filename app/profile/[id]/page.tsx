@@ -2,10 +2,11 @@ import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import pool from "@/lib/db";
 import Link from "next/link";
-import Image from "next/image";
 import AddFundsButton from "@/components/AddFundsButton";
-import DeleteProductButton from "@/components/DeleteProductButton";
+import ProductCard from "@/components/ProductCard";
 import { RowDataPacket } from "mysql2";
+
+import { formatPrice } from "@/lib/currency";
 
 interface UserRow extends RowDataPacket {
   id: number;
@@ -23,6 +24,8 @@ interface ProductRow extends RowDataPacket {
   category: string;
   image: string;
   seller_id: number;
+  seller_name?: string;
+  seller_tier?: string;
 }
 
 interface TransactionRow extends RowDataPacket {
@@ -64,7 +67,11 @@ interface WalletTransactionRow extends RowDataPacket {
 async function getUserProducts(userId: string) {
   try {
     const [rows] = await pool.query<ProductRow[]>(
-      "SELECT * FROM products WHERE seller_id = ? ORDER BY created_at DESC",
+      `SELECT p.*, u.account_type as seller_tier, u.name as seller_name 
+       FROM products p 
+       JOIN users u ON p.seller_id = u.id 
+       WHERE p.seller_id = ? 
+       ORDER BY p.created_at DESC`,
       [userId]
     );
     return rows;
@@ -257,7 +264,7 @@ export default async function ProfilePage({
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                         </svg>
-                        Verified Seller
+                        Verified
                       </span>
                     )}
                   </div>
@@ -268,7 +275,7 @@ export default async function ProfilePage({
               {isOwnProfile && (
                 <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 min-w-[200px]">
                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Account Balance</p>
-                  <p className="text-2xl font-black text-blue-600">₱{parseFloat(dbUser.balance).toLocaleString()}</p>
+                  <p className="text-2xl font-black text-blue-600">{formatPrice(dbUser.balance)}</p>
                 </div>
               )}
             </div>
@@ -303,7 +310,7 @@ export default async function ProfilePage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
                   <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Total Revenue</p>
-                  <p className="text-3xl font-black text-blue-600">₱{parseFloat(sellerStats.total_revenue).toLocaleString()}</p>
+                  <p className="text-3xl font-black text-blue-600">{formatPrice(sellerStats.total_revenue)}</p>
                   <p className="mt-2 text-xs text-blue-500 font-medium">Earnings from successful sales</p>
                 </div>
                 <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
@@ -328,7 +335,7 @@ export default async function ProfilePage({
                             <p className="text-[10px] text-zinc-500 font-bold uppercase">{new Date(sale.created_at).toLocaleDateString()} • Qty: {sale.quantity}</p>
                           </div>
                         </div>
-                        <p className="text-sm font-black text-zinc-900">₱{parseFloat(sale.price).toLocaleString()}</p>
+                        <p className="text-sm font-black text-zinc-900">{formatPrice(sale.price)}</p>
                       </div>
                     ))}
                   </div>
@@ -377,7 +384,7 @@ export default async function ProfilePage({
                               <p className={`text-sm font-bold ${
                                 tx.type === 'deposit' || tx.type === 'sale' ? 'text-green-600' : 'text-red-600'
                               }`}>
-                                {tx.type === 'deposit' || tx.type === 'sale' ? '+' : '-'} ₱{parseFloat(tx.amount).toLocaleString()}
+                                {tx.type === 'deposit' || tx.type === 'sale' ? '+' : '-'} {formatPrice(tx.amount)}
                               </p>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-xs text-zinc-500 font-medium">
@@ -436,7 +443,7 @@ export default async function ProfilePage({
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">{new Date(t.created_at).toLocaleDateString()}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-black text-blue-600">₱{parseFloat(t.total_amount).toLocaleString()}</p>
+                          <p className="text-lg font-black text-blue-600">{formatPrice(t.total_amount)}</p>
                           <span className="text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-50 px-2 py-0.5 rounded">
                             {t.status}
                           </span>
@@ -453,7 +460,7 @@ export default async function ProfilePage({
                                 </span>
                                 <span className="font-medium text-zinc-700">{item.product_name}</span>
                               </div>
-                              <p className="text-zinc-500 italic">₱{parseFloat(item.price).toLocaleString()} / unit</p>
+                              <p className="text-zinc-500 italic">{formatPrice(item.price)} / unit</p>
                             </div>
                           ))}
                       </div>
@@ -515,28 +522,12 @@ export default async function ProfilePage({
             ) : (
               <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-2 sm:gap-x-6 lg:grid-cols-3 lg:gap-x-8">
                 {userProducts.map((product) => (
-                  <div key={product.id} className="relative group">
-                    <Link href={`/products/${product.id}`} className="block group cursor-pointer">
-                      <div className="relative mb-4 aspect-square overflow-hidden rounded-3xl bg-white shadow-sm border border-zinc-100">
-                        <Image 
-                          src={product.image} 
-                          alt={product.name} 
-                          fill 
-                          className="object-contain object-center transition-transform duration-500 group-hover:scale-105" 
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                      </div>
-
-                      <div className="flex justify-between items-start gap-2 overflow-hidden px-1">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{product.category}</p>
-                          <h3 className="mt-1 text-sm font-bold text-zinc-900 truncate">{product.name}</h3>
-                        </div>
-                        <p className="mt-1 text-sm font-black text-blue-600 whitespace-nowrap">{product.price}</p>
-                      </div>
-                    </Link>
-                    {isOwnProfile && <DeleteProductButton productId={product.id} />}
-                  </div>
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    isOwner={isOwnProfile}
+                    showSeller={false}
+                  />
                 ))}
               </div>
             )}

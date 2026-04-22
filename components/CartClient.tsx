@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { removeFromCart, checkout } from "@/lib/actions";
 import { useRouter } from "next/navigation";
+import { formatPrice, parsePriceToDecimal, calculateTotal } from "@/lib/currency";
 
 interface CartItem {
   cart_item_id: number;
@@ -46,10 +47,11 @@ export default function CartClient({ cartItems, balance }: CartClientProps) {
 
   const selectedItems = cartItems.filter(item => selectedIds.includes(item.cart_item_id));
   
-  const subtotal = selectedItems.reduce((acc, item) => {
-    const price = parseFloat(item.price.replace(/[^\d.]/g, ''));
-    return acc + (price * item.quantity);
-  }, 0);
+  // Use calculateTotal for the subtotal
+  const subtotal = calculateTotal(selectedItems.map(item => {
+    const unitPrice = parsePriceToDecimal(item.price);
+    return unitPrice * item.quantity;
+  }));
 
   const handleCheckout = async () => {
     if (selectedIds.length === 0) return;
@@ -85,6 +87,8 @@ export default function CartClient({ cartItems, balance }: CartClientProps) {
     setSelectedIds(prev => prev.filter(i => i !== id));
     router.refresh();
   };
+
+  const isBalanceInsufficient = parsePriceToDecimal(balance) < parsePriceToDecimal(subtotal);
 
   if (cartItems.length === 0) {
     return (
@@ -136,7 +140,7 @@ export default function CartClient({ cartItems, balance }: CartClientProps) {
                 <p className="text-xs text-zinc-500">{item.category}</p>
               </div>
               <div className="flex items-center justify-between">
-                <p className="font-bold text-blue-600">{item.price} <span className="text-zinc-400 text-xs font-medium">x {item.quantity}</span></p>
+                <p className="font-bold text-blue-600">{formatPrice(item.price)} <span className="text-zinc-400 text-xs font-medium">x {item.quantity}</span></p>
                 <button 
                   onClick={() => handleRemove(item.cart_item_id)}
                   className="text-xs font-bold text-red-600 hover:text-red-700 uppercase tracking-wider transition-colors"
@@ -159,7 +163,7 @@ export default function CartClient({ cartItems, balance }: CartClientProps) {
             </div>
             <div className="flex justify-between text-zinc-600">
               <span>Subtotal</span>
-              <span>₱{subtotal.toLocaleString()}</span>
+              <span>{formatPrice(subtotal)}</span>
             </div>
             <div className="flex justify-between text-zinc-600">
               <span>Shipping</span>
@@ -169,7 +173,7 @@ export default function CartClient({ cartItems, balance }: CartClientProps) {
           <div className="pt-4 mb-6">
             <div className="flex justify-between items-end">
               <span className="text-zinc-900 font-bold">Total</span>
-              <span className="text-2xl font-black text-zinc-900">₱{subtotal.toLocaleString()}</span>
+              <span className="text-2xl font-black text-zinc-900">{formatPrice(subtotal)}</span>
             </div>
           </div>
 
@@ -181,7 +185,7 @@ export default function CartClient({ cartItems, balance }: CartClientProps) {
                 <input type="radio" name="payment" value="wallet" checked={paymentMethod === 'wallet'} onChange={(e) => setPaymentMethod(e.target.value)} className="h-4 w-4 text-blue-600" />
                 <div className="flex-grow">
                   <p className="text-sm font-bold text-zinc-900">LuloyXpress Wallet</p>
-                  <p className="text-[10px] text-zinc-500 font-medium">Balance: ₱{parseFloat(balance).toLocaleString()}</p>
+                  <p className="text-[10px] text-zinc-500 font-medium">Balance: {formatPrice(balance)}</p>
                 </div>
               </label>
 
@@ -239,12 +243,12 @@ export default function CartClient({ cartItems, balance }: CartClientProps) {
 
           <button 
             onClick={handleCheckout}
-            disabled={isPending || selectedIds.length === 0 || parseFloat(balance) < subtotal}
+            disabled={isPending || selectedIds.length === 0 || isBalanceInsufficient}
             className="w-full rounded-full bg-black py-4 text-base font-bold text-white transition-all hover:bg-zinc-800 shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPending ? 'Processing...' : 
              selectedIds.length === 0 ? 'Select Items to Buy' :
-             parseFloat(balance) < subtotal ? 'Insufficient Balance' : 'Complete Purchase'}
+             isBalanceInsufficient ? 'Insufficient Balance' : 'Complete Purchase'}
           </button>
           
           {error && (

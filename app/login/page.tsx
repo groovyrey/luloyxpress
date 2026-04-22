@@ -29,6 +29,7 @@ export default function LoginPage() {
                 src="/logo.png" 
                 alt="LuloyXpress Logo" 
                 fill
+                sizes="64px"
                 className="object-contain"
                 priority
               />
