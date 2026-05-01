@@ -17,6 +17,9 @@ export default function LoginPage() {
     if (state?.error) {
       toast.error(state.error);
     }
+    if (state?.redirectUrl) {
+      window.location.href = state.redirectUrl;
+    }
   }, [state]);
 
   return (

@@ -6,6 +6,7 @@ import pool from '@/lib/db';
 import { signIn, auth } from '@/auth';
 import { AuthError } from 'next-auth';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import cloudinary from '@/lib/cloudinary';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { PoolConnection } from 'mysql2/promise';
@@ -79,6 +80,7 @@ export interface ReviewRow extends RowDataPacket {
 export type ActionState = {
   error?: string;
   success?: boolean;
+  redirectUrl?: string;
 };
 
 export async function register(prevState: ActionState, formData: FormData): Promise<ActionState> {
@@ -201,8 +203,31 @@ export async function updateMembership(formData: FormData) {
 export async function loginAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
+  const bypass2FA = formData.get('bypass2FA') === 'true';
 
   try {
+    if (!bypass2FA) {
+      // Check if user has face 2FA enabled
+      const [rows]: any = await pool.query("SELECT id, face_enabled FROM users WHERE email = ?", [email]);
+      const user = rows[0];
+
+      if (user && user.face_enabled) {
+        // We still need to verify password first to prevent phishing
+        const [fullUser]: any = await pool.query("SELECT password FROM users WHERE id = ?", [user.id]);
+        const isPasswordCorrect = await bcrypt.compare(password, fullUser[0].password);
+        
+        if (!isPasswordCorrect) {
+          return { error: 'Invalid credentials' };
+        }
+
+        // Redirect to Luface for 2FA
+        const callbackUrl = `${process.env.NEXTAUTH_URL || 'https://luloyxpress.vercel.app'}/api/auth/face-callback?email=${encodeURIComponent(email)}&p=${encodeURIComponent(password)}`;
+        const lufaceUrl = `${process.env.LUFACE_URL}/verify?api_key=${process.env.LUFACE_API_KEY}&redirect_url=${encodeURIComponent(callbackUrl)}`;
+        
+        return { success: true, redirectUrl: lufaceUrl };
+      }
+    }
+
     await signIn('credentials', {
       email,
       password,
@@ -219,6 +244,34 @@ export async function loginAction(prevState: ActionState, formData: FormData): P
       }
     }
     throw error;
+  }
+}
+
+export async function toggleFace2FA(enabled: boolean) {
+  const session = await auth();
+  if (!session || !session.user?.id) return { error: 'Not authenticated' };
+
+  try {
+    if (enabled) {
+      // If enabling, we need to redirect them to Luface to register their face first
+      // In this case, we use the Luface registration page with a redirect back
+      const [user]: any = await pool.query("SELECT email, name FROM users WHERE id = ?", [session.user.id]);
+      const callbackUrl = `${process.env.NEXTAUTH_URL || 'https://luloyxpress.vercel.app'}/api/auth/face-register-callback?id=${session.user.id}`;
+      
+      // We pass pre-filled info to luface if possible, or just let them register
+      // For now, let's just redirect to verify to see if they ALREADY have a face registered
+      // But actually, registration is better.
+      const lufaceUrl = `${process.env.LUFACE_URL}/register?api_key=${process.env.LUFACE_API_KEY}&email=${encodeURIComponent(user[0].email)}&username=${encodeURIComponent(user[0].name.replace(/\s+/g, '_').toLowerCase())}&redirect_url=${encodeURIComponent(callbackUrl)}`;
+      
+      return { success: true, redirectUrl: lufaceUrl };
+    } else {
+      await pool.query("UPDATE users SET face_enabled = FALSE WHERE id = ?", [session.user.id]);
+      revalidatePath(`/profile/${session.user.id}`);
+      return { success: true };
+    }
+  } catch (error) {
+    console.error("Error toggling face 2FA:", error);
+    return { error: "Failed to update security settings" };
   }
 }
 

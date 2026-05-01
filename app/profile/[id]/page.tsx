@@ -4,6 +4,7 @@ import pool from "@/lib/db";
 import Link from "next/link";
 import AddFundsButton from "@/components/AddFundsButton";
 import ProductCard from "@/components/ProductCard";
+import Face2FASettings from "@/components/Face2FASettings";
 import { RowDataPacket } from "mysql2";
 
 import { formatPrice } from "@/lib/currency";
@@ -14,6 +15,7 @@ interface UserRow extends RowDataPacket {
   email: string;
   account_type: string;
   balance: string;
+  face_enabled: boolean;
   created_at: Date;
 }
 
@@ -251,6 +253,7 @@ export default async function ProfilePage({
 
           {/* Profile Card */}
           <section className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100">
+            {/* ... (rest of profile card) ... */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="flex items-center gap-6">
                 <div className="h-20 w-20 flex-shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold uppercase">
@@ -302,6 +305,8 @@ export default async function ProfilePage({
               )}
             </div>
           </section>
+
+          {isOwnProfile && <Face2FASettings userId={id} initialEnabled={!!dbUser.face_enabled} />}
 
           {/* Seller Dashboard for own profile */}
           {isOwnProfile && sellerStats && (
