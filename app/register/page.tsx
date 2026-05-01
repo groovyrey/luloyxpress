@@ -18,6 +18,10 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (state?.success) {
+      if (state.redirectUrl) {
+        window.location.href = state.redirectUrl;
+        return;
+      }
       toast.success('Registration successful! Please sign in.');
       router.push('/login');
     } else if (state?.error) {
@@ -96,6 +100,18 @@ export default function RegisterPage() {
                 placeholder="Password"
               />
             </div>
+          </div>
+
+          <div className="flex items-center">
+            <input
+              id="enableFace2FA"
+              name="enableFace2FA"
+              type="checkbox"
+              className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="enableFace2FA" className="ml-2 block text-sm text-zinc-700">
+              Enable Face Biometric 2FA (Secure sign-in)
+            </label>
           </div>
 
           <div>

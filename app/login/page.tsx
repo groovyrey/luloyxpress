@@ -3,24 +3,31 @@
 import { loginAction, type ActionState } from '@/lib/actions';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, Suspense } from 'react';
 import { toast } from 'sonner';
+import { useSearchParams } from 'next/navigation';
 
 const initialState: ActionState = {
   error: undefined,
 };
 
-export default function LoginPage() {
+function LoginContent() {
   const [state, formAction, isPending] = useActionState(loginAction, initialState);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
+    const message = searchParams.get('message');
+    if (message) {
+      toast.success(message);
+    }
+
     if (state?.error) {
       toast.error(state.error);
     }
     if (state?.redirectUrl) {
       window.location.href = state.redirectUrl;
     }
-  }, [state]);
+  }, [state, searchParams]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12 sm:px-6 lg:px-8">
@@ -95,5 +102,17 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

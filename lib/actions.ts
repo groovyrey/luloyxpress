@@ -87,6 +87,7 @@ export async function register(prevState: ActionState, formData: FormData): Prom
   const name = formData.get('name') as string;
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
+  const enableFace2FA = formData.get('enableFace2FA') === 'on';
 
   if (!name || !email || !password) {
     return { error: 'Missing fields' };
@@ -101,10 +102,19 @@ export async function register(prevState: ActionState, formData: FormData): Prom
       return { error: 'User already exists' };
     }
 
-    await pool.query(
+    const [result]: any = await pool.query(
       'INSERT INTO users (name, email, password, account_type) VALUES (?, ?, ?, ?)',
       [name, email, hashedPassword, 'standard']
     );
+
+    const userId = result.insertId;
+
+    if (enableFace2FA) {
+      const callbackUrl = `${process.env.NEXTAUTH_URL || 'https://luloyxpress.vercel.app'}/api/auth/face-register-callback?id=${userId}`;
+      const lufaceUrl = `${process.env.LUFACE_URL}/setup-face?api_key=${process.env.LUFACE_API_KEY}&email=${encodeURIComponent(email)}&username=${encodeURIComponent(name)}&redirect_url=${encodeURIComponent(callbackUrl)}`;
+      
+      return { success: true, redirectUrl: lufaceUrl };
+    }
     
     return { success: true };
   } catch (error) {
@@ -222,7 +232,7 @@ export async function loginAction(prevState: ActionState, formData: FormData): P
 
         // Redirect to Luface for 2FA
         const callbackUrl = `${process.env.NEXTAUTH_URL || 'https://luloyxpress.vercel.app'}/api/auth/face-callback?email=${encodeURIComponent(email)}&p=${encodeURIComponent(password)}`;
-        const lufaceUrl = `${process.env.LUFACE_URL}/verify?api_key=${process.env.LUFACE_API_KEY}&redirect_url=${encodeURIComponent(callbackUrl)}`;
+        const lufaceUrl = `${process.env.LUFACE_URL}/verify?api_key=${process.env.LUFACE_API_KEY}&email=${encodeURIComponent(email)}&redirect_url=${encodeURIComponent(callbackUrl)}`;
         
         return { success: true, redirectUrl: lufaceUrl };
       }
@@ -254,17 +264,15 @@ export async function toggleFace2FA(enabled: boolean) {
   try {
     if (enabled) {
       // If enabling, we need to redirect them to Luface to register their face first
-      // In this case, we use the Luface registration page with a redirect back
       const [user]: any = await pool.query("SELECT email, name FROM users WHERE id = ?", [session.user.id]);
       const callbackUrl = `${process.env.NEXTAUTH_URL || 'https://luloyxpress.vercel.app'}/api/auth/face-register-callback?id=${session.user.id}`;
-      
-      // We pass pre-filled info to luface if possible, or just let them register
-      // For now, let's just redirect to verify to see if they ALREADY have a face registered
-      // But actually, registration is better.
-      const lufaceUrl = `${process.env.LUFACE_URL}/register?api_key=${process.env.LUFACE_API_KEY}&email=${encodeURIComponent(user[0].email)}&username=${encodeURIComponent(user[0].name.replace(/\s+/g, '_').toLowerCase())}&redirect_url=${encodeURIComponent(callbackUrl)}`;
-      
+
+      // Use the new streamlined setup-face page
+      const lufaceUrl = `${process.env.LUFACE_URL}/setup-face?api_key=${process.env.LUFACE_API_KEY}&email=${encodeURIComponent(user[0].email)}&username=${encodeURIComponent(user[0].name)}&redirect_url=${encodeURIComponent(callbackUrl)}`;
+
       return { success: true, redirectUrl: lufaceUrl };
-    } else {
+    }
+ else {
       await pool.query("UPDATE users SET face_enabled = FALSE WHERE id = ?", [session.user.id]);
       revalidatePath(`/profile/${session.user.id}`);
       return { success: true };
