@@ -30,13 +30,6 @@ async function migrate() {
       console.log('face_enabled column already exists.');
     }
 
-    if (!columnNames.includes('face_descriptor')) {
-      await connection.query('ALTER TABLE users ADD COLUMN face_descriptor JSON');
-      console.log('Added face_descriptor column.');
-    } else {
-      console.log('face_descriptor column already exists.');
-    }
-
     console.log('Migration complete!');
     await connection.end();
   } catch (error) {
