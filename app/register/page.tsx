@@ -6,6 +6,12 @@ import Image from 'next/image';
 import { useActionState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, UserPlus } from 'lucide-react';
 
 const initialState: ActionState = {
   error: undefined,
@@ -30,101 +36,110 @@ export default function RegisterPage() {
   }, [state, router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-2xl shadow-sm border border-zinc-100">
-        <div className="flex flex-col items-center">
-          <Link href="/">
-            <div className="relative h-16 w-16 overflow-hidden rounded-2xl mb-4">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50/50 px-4 py-12 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md border-zinc-100 shadow-xl shadow-zinc-200/50">
+        <CardHeader className="flex flex-col items-center space-y-4 pb-8">
+          <Link href="/" className="transition-transform hover:scale-105 active:scale-95">
+            <div className="relative h-16 w-16 overflow-hidden rounded-2xl shadow-sm border border-zinc-100 bg-white">
               <Image 
                 src="/logo.png" 
                 alt="LuloyXpress Logo" 
                 fill
                 sizes="64px"
-                className="object-contain"
+                className="object-contain p-2"
                 priority
               />
             </div>
           </Link>
-          <h2 className="text-center text-3xl font-bold tracking-tight text-zinc-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-zinc-600">
-            Already have an account?{' '}
-            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-              Sign in
-            </Link>
-          </p>
-        </div>
-        <form 
-          action={formAction}
-          className="mt-8 space-y-6"
-        >
-          <div className="space-y-4 rounded-md shadow-sm">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-zinc-700">
-                Full Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                className="relative block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="Full Name"
-              />
-            </div>
-            <div>
-              <label htmlFor="email-address" className="block text-sm font-medium text-zinc-700">
-                Email address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="relative block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="Email address"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="relative block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="Password"
-              />
-            </div>
+          <div className="space-y-1 text-center">
+            <CardTitle className="text-3xl font-bold tracking-tight text-zinc-900">
+              Create Account
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Already have an account?{' '}
+              <Link href="/login" className="font-bold text-blue-600 hover:text-blue-500 transition-colors">
+                Sign in
+              </Link>
+            </CardDescription>
           </div>
+        </CardHeader>
+        <CardContent>
+          <form action={formAction} className="space-y-6">
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                  Full Name
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  placeholder="Juan Dela Cruz"
+                  className="h-12 bg-zinc-50/50 focus-visible:bg-white transition-all"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="name@example.com"
+                  className="h-12 bg-zinc-50/50 focus-visible:bg-white transition-all"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  className="h-12 bg-zinc-50/50 focus-visible:bg-white transition-all"
+                />
+              </div>
+            </div>
 
-          <div className="flex items-center">
-            <input
-              id="enableFace2FA"
-              name="enableFace2FA"
-              type="checkbox"
-              className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="enableFace2FA" className="ml-2 block text-sm text-zinc-700">
-              Enable Face Biometric 2FA (Secure sign-in)
-            </label>
-          </div>
+            <div className="flex items-center space-x-2 bg-blue-50/50 p-3 rounded-xl border border-blue-100/50 transition-colors hover:bg-blue-50">
+              <Checkbox id="enableFace2FA" name="enableFace2FA" className="border-blue-200 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600" />
+              <Label 
+                htmlFor="enableFace2FA" 
+                className="text-xs font-medium text-blue-900 cursor-pointer select-none leading-tight"
+              >
+                Enable Face Biometric 2FA
+                <span className="block text-[10px] text-blue-600/70 font-normal">Recommended for secure sign-in</span>
+              </Label>
+            </div>
 
-          <div>
-            <button
+            <Button
               type="submit"
               disabled={isPending}
-              className="group relative flex w-full justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-12 rounded-full font-bold shadow-lg shadow-blue-500/10 active:scale-[0.98] transition-all"
             >
-              {isPending ? 'Signing up...' : 'Sign up'}
-            </button>
-          </div>
-        </form>
-      </div>
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Sign Up
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+

@@ -80,7 +80,7 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
         <nav className="flex mb-8 text-sm font-medium text-zinc-500">
           <Link href="/shop" className="hover:text-black transition-colors">Shop All</Link>
           <span className="mx-2">/</span>
-          <span className="text-zinc-900 truncate">{product.name}</span>
+          <span className="text-zinc-900 leading-tight">{product.name}</span>
         </nav>
 
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">

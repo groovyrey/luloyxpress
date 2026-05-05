@@ -253,17 +253,16 @@ export default async function ProfilePage({
 
           {/* Profile Card */}
           <section className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100">
-            {/* ... (rest of profile card) ... */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start lg:items-center gap-6">
                 <div className="h-20 w-20 flex-shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold uppercase">
                   {dbUser.name.charAt(0)}
                 </div>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-bold text-zinc-900">{dbUser.name}</h1>
+                <div className="text-center sm:text-left">
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <h1 className="text-2xl font-bold text-zinc-900 break-words max-w-full">{dbUser.name}</h1>
                     {dbUser.account_type === 'pro' && (
-                      <span className="flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600 uppercase border border-blue-100">
+                      <span className="flex-shrink-0 flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600 uppercase border border-blue-100">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                         </svg>
@@ -271,12 +270,12 @@ export default async function ProfilePage({
                       </span>
                     )}
                   </div>
-                  <p className="text-zinc-500">{isOwnProfile ? dbUser.email : "Community Member"}</p>
+                  <p className="text-zinc-500 break-all">{isOwnProfile ? dbUser.email : "Community Member"}</p>
                 </div>
               </div>
 
               {isOwnProfile && (
-                <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 min-w-[200px]">
+                <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100 w-full lg:w-auto lg:min-w-[200px]">
                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Account Balance</p>
                   <p className="text-2xl font-black text-blue-600">{formatPrice(dbUser.balance)}</p>
                 </div>
@@ -330,17 +329,17 @@ export default async function ProfilePage({
                   <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-4">Recent Sales</h3>
                   <div className="space-y-3">
                     {recentSales.map((sale, idx) => (
-                      <div key={`sale-${idx}`} className="flex items-center justify-between p-4 rounded-xl border border-zinc-100 bg-zinc-50/30">
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                      <div key={`sale-${idx}`} className="flex items-center justify-between p-4 rounded-xl border border-zinc-100 bg-zinc-50/30 gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="h-10 w-10 flex-shrink-0 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
                             #{sale.order_id}
                           </div>
-                          <div>
-                            <p className="text-sm font-bold text-zinc-900">{sale.product_name}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-zinc-900 leading-snug">{sale.product_name}</p>
                             <p className="text-[10px] text-zinc-500 font-bold uppercase">{new Date(sale.created_at).toLocaleDateString()} • Qty: {sale.quantity}</p>
                           </div>
                         </div>
-                        <p className="text-sm font-black text-zinc-900">{formatPrice(sale.price)}</p>
+                        <p className="text-sm font-black text-zinc-900 leading-tight">{formatPrice(sale.price)}</p>
                       </div>
                     ))}
                   </div>
@@ -352,7 +351,7 @@ export default async function ProfilePage({
           {/* Wallet Transaction History section for own profile */}
           {isOwnProfile && (
             <section className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100">
-              <h2 className="text-xl font-bold text-zinc-900 mb-6">Transaction Process</h2>
+              <h2 className="text-xl font-bold text-zinc-900 mb-6">Transaction History</h2>
               {walletTransactions.length === 0 ? (
                 <div className="text-center py-6 border-2 border-dashed border-zinc-100 rounded-xl">
                   <p className="text-zinc-500">No transactions recorded yet.</p>
@@ -372,7 +371,7 @@ export default async function ProfilePage({
                       <tbody className="bg-white divide-y divide-zinc-100">
                         {walletTransactions.map((tx) => (
                           <tr key={tx.id} className="hover:bg-zinc-50/50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-6 py-4">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                                 tx.type === 'deposit' || tx.type === 'sale' 
                                   ? 'bg-green-50 text-green-600' 
@@ -385,14 +384,14 @@ export default async function ProfilePage({
                               <p className="text-sm font-medium text-zinc-700">{tx.description}</p>
                               {tx.reference_id && <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">Ref: #{tx.reference_id}</p>}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-6 py-4">
                               <p className={`text-sm font-bold ${
                                 tx.type === 'deposit' || tx.type === 'sale' ? 'text-green-600' : 'text-red-600'
                               }`}>
                                 {tx.type === 'deposit' || tx.type === 'sale' ? '+' : '-'} {formatPrice(tx.amount)}
                               </p>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-xs text-zinc-500 font-medium">
+                            <td className="px-6 py-4 text-xs text-zinc-500 font-medium">
                               {new Date(tx.created_at).toLocaleDateString()}
                             </td>
                           </tr>
@@ -458,14 +457,14 @@ export default async function ProfilePage({
                         {allOrderItems
                           .filter(item => item.order_id === t.order_id)
                           .map((item, idx) => (
-                            <div key={`item-${idx}`} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2">
-                                <span className="h-5 w-5 rounded bg-zinc-200 flex items-center justify-center text-[10px] font-bold text-zinc-600">
+                            <div key={`item-${idx}`} className="flex items-center justify-between text-sm gap-4">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="h-5 w-5 flex-shrink-0 rounded bg-zinc-200 flex items-center justify-center text-[10px] font-bold text-zinc-600">
                                   {item.quantity}x
                                 </span>
-                                <span className="font-medium text-zinc-700">{item.product_name}</span>
+                                <span className="font-medium text-zinc-700 leading-snug">{item.product_name}</span>
                               </div>
-                              <p className="text-zinc-500 italic">{formatPrice(item.price)} / unit</p>
+                              <p className="text-zinc-500 italic leading-tight">{formatPrice(item.price)} / unit</p>
                             </div>
                           ))}
                       </div>

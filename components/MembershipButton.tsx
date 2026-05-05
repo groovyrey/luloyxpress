@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { updateMembership } from '@/lib/actions';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { Check, Loader2 } from 'lucide-react';
 
 interface MembershipButtonProps {
   planId: string;
@@ -23,25 +26,32 @@ export default function MembershipButton({ planId, current, buttonText }: Member
     setIsPending(false);
 
     if (result?.success) {
-      alert(`Membership updated to ${planId.toUpperCase()} successfully!`);
+      toast.success(`Membership updated to ${planId.toUpperCase()} successfully!`, {
+        icon: <Check className="h-4 w-4" />,
+      });
     } else if (result?.error) {
-      alert(result.error);
+      toast.error(result.error);
     }
   }
 
   return (
-    <button
+    <Button
       onClick={handleUpdate}
       disabled={current || isPending}
-      className={`w-full rounded-full py-4 text-sm font-bold transition-all ${
-        current
-          ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-          : isPending
-          ? "bg-zinc-800 text-white opacity-50 cursor-wait"
-          : "bg-black text-white hover:bg-zinc-800"
+      variant={current ? "outline" : "default"}
+      className={`w-full h-12 rounded-full font-bold transition-all ${
+        current ? "bg-zinc-100 text-zinc-400 border-zinc-200" : ""
       }`}
     >
-      {isPending ? 'Processing...' : buttonText}
-    </button>
+      {isPending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Processing...
+        </>
+      ) : (
+        buttonText
+      )}
+    </Button>
   );
 }
+

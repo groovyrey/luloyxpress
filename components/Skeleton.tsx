@@ -1,8 +1,6 @@
-export function Skeleton({ className }: { className?: string }) {
-  return (
-    <div className={`animate-pulse rounded-md bg-zinc-200 ${className}`} />
-  );
-}
+import { Skeleton } from "@/components/ui/skeleton";
+
+export { Skeleton };
 
 export function ProductCardSkeleton() {
   return (

@@ -107,6 +107,32 @@ export function formatPrice(
 }
 
 /**
+ * Formats a price in a compact way (e.g., 3.5M, 150K)
+ */
+export function formatCompactPrice(
+  price: number | string,
+  currency: string = DEFAULT_CURRENCY
+): string {
+  const numPrice = parsePriceToDecimal(price);
+  const symbol = CURRENCY_SYMBOLS[currency as keyof typeof CURRENCY_SYMBOLS] || '₱';
+
+  if (numPrice >= 1_000_000_000) {
+    return `${symbol}${(numPrice / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+  }
+  if (numPrice >= 1_000_000) {
+    return `${symbol}${(numPrice / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  }
+  if (numPrice >= 1_000) {
+    return `${symbol}${(numPrice / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  }
+
+  return formatPrice(numPrice, currency, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+/**
  * Calculates total from a list of prices
  */
 export function calculateTotal(items: (string | number)[]): string {

@@ -5,6 +5,32 @@ import { useRouter } from "next/navigation";
 import { createProduct, type ActionState } from "@/lib/actions";
 import { validatePrice, formatPrice, parsePriceToDecimal } from "@/lib/currency";
 import { toast } from "sonner";
+import { 
+  Plus, 
+  X, 
+  Upload, 
+  Tag as TagIcon, 
+  Info, 
+  AlertCircle,
+  Package,
+  CheckCircle2,
+  Loader2
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 
 const initialState: ActionState = {
   error: undefined,
@@ -19,6 +45,7 @@ export default function SellProductForm() {
   const [tagInput, setTagInput] = useState("");
   const [tagList, setTagList] = useState<string[]>([]);
   const [description, setDescription] = useState("");
+  const [name, setName] = useState("");
 
   const addTag = (value: string) => {
     const cleanTag = value.trim().replace(/,/g, "");
@@ -40,7 +67,6 @@ export default function SellProductForm() {
   };
 
   const handleTagInput = (value: string) => {
-    // If the user typed a space or comma, add the tag immediately
     if (value.endsWith(" ") || value.endsWith(",")) {
       addTag(value.slice(0, -1));
     } else {
@@ -56,6 +82,7 @@ export default function SellProductForm() {
       removeTag(tagList[tagList.length - 1]);
     }
   };
+  
   const [price, setPrice] = useState("");
   const [priceError, setPriceError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -114,225 +141,254 @@ export default function SellProductForm() {
       return;
     }
     
-    // Send clean decimal string to the server
     const numericPrice = parsePriceToDecimal(price).toFixed(2);
     formData.set('price', numericPrice);
+    formData.set('category', category);
     
     formAction(formData);
   };
 
   return (
-    <form action={handleSubmit} className="space-y-6">
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-1">
-          Product Name
-        </label>
-        <div className="flex items-center justify-between mb-2">
-          <span></span>
-          <span className="text-xs text-zinc-500">0/100</span>
-        </div>
-        <input
-          type="text"
-          id="name"
-          name="name"
-          required
-          maxLength={100}
-          placeholder="e.g., Vintage Camera"
-          className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label htmlFor="price" className="block text-sm font-medium text-zinc-700">
-              Price (Pesos)
-            </label>
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-              Limit: ₱1 - ₱10M
+    <form action={handleSubmit} className="space-y-8">
+      <div className="space-y-4">
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="name" className="text-sm font-bold uppercase tracking-wider text-zinc-500">
+              Product Name
+            </Label>
+            <span className={`text-[10px] font-bold ${name.length > 90 ? 'text-orange-500' : 'text-zinc-400'}`}>
+              {name.length}/100
             </span>
           </div>
-          <div className="relative mb-2">
-            <span className="absolute left-4 top-3 text-zinc-500 font-medium">₱</span>
-            <input
-              type="text"
-              id="price"
-              name="price"
-              value={price}
-              onChange={handlePriceChange}
-              required
-              maxLength={16}
-              placeholder="1500 or 1,500.00"
-              className={`block w-full rounded-lg border px-4 py-3 pl-8 text-zinc-900 focus:ring-blue-500 focus:outline-none sm:text-sm transition-colors ${
-                priceError
-                  ? 'border-red-300 focus:border-red-500'
-                  : 'border-zinc-300 focus:border-blue-500'
-              }`}
+          <Input
+            id="name"
+            name="name"
+            required
+            maxLength={100}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Vintage Camera"
+            className="h-12 text-base"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="price" className="text-sm font-bold uppercase tracking-wider text-zinc-500">
+                Price (Pesos)
+              </Label>
+              <span className="text-[10px] font-bold text-zinc-400">₱1 - ₱10M</span>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">₱</span>
+              <Input
+                id="price"
+                name="price"
+                value={price}
+                onChange={handlePriceChange}
+                required
+                maxLength={16}
+                placeholder="1500"
+                className={`pl-7 h-12 text-base ${priceError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+              />
+            </div>
+            {priceError && (
+              <div className="flex items-center gap-1 text-destructive">
+                <AlertCircle className="h-3 w-3" />
+                <p className="text-[10px] font-bold uppercase">{priceError}</p>
+              </div>
+            )}
+            {getPricePreview() && !priceError && (
+              <div className="flex items-center gap-1 text-green-600">
+                <CheckCircle2 className="h-3 w-3" />
+                <p className="text-[10px] font-bold uppercase">Preview: {getPricePreview()}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="category" className="text-sm font-bold uppercase tracking-wider text-zinc-500">
+              Category
+            </Label>
+            <Select value={category} onValueChange={(val) => val && setCategory(val)}>
+              <SelectTrigger className="h-12 text-base">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Fashion</SelectLabel>
+                  <SelectItem value="Men's Apparel">Men&apos;s Apparel</SelectItem>
+                  <SelectItem value="Women's Apparel">Women&apos;s Apparel</SelectItem>
+                  <SelectItem value="Footwear">Footwear</SelectItem>
+                  <SelectItem value="Jewelry & Accessories">Jewelry & Accessories</SelectItem>
+                  <SelectItem value="Bags & Wallets">Bags & Wallets</SelectItem>
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Electronics</SelectLabel>
+                  <SelectItem value="Smartphones & Tablets">Smartphones & Tablets</SelectItem>
+                  <SelectItem value="Computers & Laptops">Computers & Laptops</SelectItem>
+                  <SelectItem value="Audio & Headphones">Audio & Headphones</SelectItem>
+                  <SelectItem value="Cameras & Photography">Cameras & Photography</SelectItem>
+                  <SelectItem value="Gadgets & Wearables">Gadgets & Wearables</SelectItem>
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Home & Living</SelectLabel>
+                  <SelectItem value="Furniture">Furniture</SelectItem>
+                  <SelectItem value="Kitchenware">Kitchenware</SelectItem>
+                  <SelectItem value="Home Decor">Home Decor</SelectItem>
+                  <SelectItem value="Appliances">Appliances</SelectItem>
+                  <SelectItem value="Garden & Outdoor">Garden & Outdoor</SelectItem>
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Other</SelectLabel>
+                  <SelectItem value="Food">Food</SelectItem>
+                  <SelectItem value="Automotive">Automotive</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <input type="hidden" name="category" value={category} />
+          </div>
+        </div>
+
+        {showOtherCategoryInput && (
+          <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="other_category" className="text-sm font-bold uppercase tracking-wider text-zinc-500">
+                Specify Other Category
+              </Label>
+              <span className="text-[10px] font-bold text-zinc-400">{otherCategory.length}/50</span>
+            </div>
+            <Input
+              id="other_category"
+              name="other_category"
+              value={otherCategory}
+              onChange={(e) => setOtherCategory(e.target.value)}
+              required={showOtherCategoryInput}
+              maxLength={50}
+              placeholder="e.g., Art Collectibles"
+              className="h-12"
             />
           </div>
-          {priceError && (
-            <p className="text-xs font-semibold text-red-600 mb-1">{priceError}</p>
-          )}
-          {getPricePreview() && !priceError && (
-            <p className="text-xs text-green-600 font-medium">Preview: {getPricePreview()}</p>
-          )}
-        </div>
+        )}
 
-        <div>
-          <label htmlFor="category" className="block text-sm font-medium text-zinc-700 mb-1">
-            Category
-          </label>
-          <select
-            id="category"
-            name="category"
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            className="block w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          >
-            <optgroup label="Fashion">
-              <option value="Men&apos;s Apparel">Men&apos;s Apparel</option>
-              <option value="Women&apos;s Apparel">Women&apos;s Apparel</option>
-              <option value="Footwear">Footwear</option>
-              <option value="Jewelry & Accessories">Jewelry & Accessories</option>
-              <option value="Bags & Wallets">Bags & Wallets</option>
-            </optgroup>
-            <optgroup label="Electronics">
-              <option value="Smartphones & Tablets">Smartphones & Tablets</option>
-              <option value="Computers & Laptops">Computers & Laptops</option>
-              <option value="Audio & Headphones">Audio & Headphones</option>
-              <option value="Cameras & Photography">Cameras & Photography</option>
-              <option value="Gadgets & Wearables">Gadgets & Wearables</option>
-            </optgroup>
-            <optgroup label="Home & Living">
-              <option value="Furniture">Furniture</option>
-              <option value="Kitchenware">Kitchenware</option>
-              <option value="Home Decor">Home Decor</option>
-              <option value="Appliances">Appliances</option>
-              <option value="Garden & Outdoor">Garden & Outdoor</option>
-            </optgroup>
-            <optgroup label="Food">
-              <option value="Food">Food</option>
-            </optgroup>
-            <optgroup label="Automotive">
-              <option value="Automotive">Automotive</option>
-            </optgroup>
-            <optgroup label="Other">
-              <option value="Other">Other</option>
-            </optgroup>
-          </select>
-        </div>
-      </div>
-
-      {showOtherCategoryInput && (
-        <div>
-          <label htmlFor="other_category" className="block text-sm font-medium text-zinc-700 mb-1">
-            Specify Other Category
-          </label>
-          <input
-            type="text"
-            id="other_category"
-            name="other_category"
-            value={otherCategory}
-            onChange={(event) => setOtherCategory(event.target.value)}
-            required={showOtherCategoryInput}
-            maxLength={50}
-            placeholder="e.g., Art Collectibles"
-            className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          />
-          <p className="mt-1 text-xs text-zinc-500">{otherCategory.length}/50</p>
-        </div>
-      )}
-
-      <div>
-        <label htmlFor="tags-input" className="block text-sm font-medium text-zinc-700 mb-1">
-          Tags
-        </label>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Press Space or Comma to add</span>
-          <span className="text-xs text-zinc-500">{tags.length}/200</span>
-        </div>
-        
-        <div className="flex flex-wrap gap-2 p-2 min-h-[50px] rounded-lg border border-zinc-300 bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
-          {tagList.map((tag, index) => (
-            <span 
-              key={index}
-              className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-bold animate-in zoom-in-50 duration-200 group"
-            >
-              {tag}
-              <button
-                type="button"
-                onClick={() => removeTag(tag)}
-                className="hover:text-red-500 transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-              </button>
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-bold uppercase tracking-wider text-zinc-500">
+              Tags
+            </Label>
+            <span className="text-[10px] font-bold text-zinc-400">
+              {tags.length}/200 • SPACE OR COMMA TO ADD
             </span>
-          ))}
-          <input
-            type="text"
-            id="tags-input"
-            value={tagInput}
-            onChange={(e) => handleTagInput(e.target.value)}
-            onKeyDown={handleTagKeyDown}
-            onBlur={() => addTag(tagInput)}
-            placeholder={tagList.length === 0 ? "#secondhand, #vintage..." : "Add more..."}
-            className="flex-1 min-w-[120px] bg-transparent border-none p-1 text-sm focus:outline-none focus:ring-0 text-zinc-900"
+          </div>
+          <Card className="shadow-none border-zinc-200 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+            <CardContent className="p-2 flex flex-wrap gap-2 min-h-[50px]">
+              {tagList.map((tag, index) => (
+                <Badge 
+                  key={index}
+                  variant="secondary"
+                  className="bg-blue-50 text-blue-700 border-blue-100 px-3 py-1 text-sm font-bold gap-1 animate-in zoom-in-50 duration-200"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="hover:text-red-500 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+              <input
+                type="text"
+                id="tags-input"
+                value={tagInput}
+                onChange={(e) => handleTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={() => addTag(tagInput)}
+                placeholder={tagList.length === 0 ? "#secondhand, #vintage..." : "Add more..."}
+                className="flex-1 min-w-[120px] bg-transparent border-none p-1 text-sm focus:outline-none focus:ring-0 text-zinc-900"
+              />
+            </CardContent>
+          </Card>
+          <input type="hidden" name="tags" value={tags} />
+        </div>
+
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="description" className="text-sm font-bold uppercase tracking-wider text-zinc-500">
+              Description
+            </Label>
+            <span className="text-[10px] font-bold text-zinc-400">{description.length}/2000</span>
+          </div>
+          <Textarea
+            id="description"
+            name="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={5}
+            required
+            maxLength={2000}
+            placeholder="Describe your product in detail..."
+            className="text-base resize-none"
           />
         </div>
-        
-        {/* Hidden input to store the comma-separated string for form submission */}
-        <input type="hidden" name="tags" value={tags} />
-        
-        <p className="mt-2 text-xs text-zinc-500 italic">Example: vintage, limited, aesthetic</p>
-      </div>
 
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-zinc-700 mb-1">
-          Description
-        </label>
-        <div className="flex items-center justify-between mb-2">
-          <span></span>
-          <span className="text-xs text-zinc-500">{description.length}/2000</span>
+        <div className="grid gap-2">
+          <Label htmlFor="image" className="text-sm font-bold uppercase tracking-wider text-zinc-500">
+            Product Image
+          </Label>
+          <div className="relative group">
+            <div className="flex items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-zinc-200 border-dashed rounded-xl appearance-none cursor-pointer hover:border-blue-400 focus:outline-none group-hover:bg-zinc-50">
+              <div className="flex flex-col items-center space-y-2">
+                <Upload className="w-8 h-8 text-zinc-400 group-hover:text-blue-500 transition-colors" />
+                <span className="font-medium text-zinc-600">
+                  Click to upload product image
+                </span>
+              </div>
+              <input
+                type="file"
+                id="image"
+                name="image"
+                accept="image/*"
+                required
+                onChange={handleFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Info className="h-3 w-3 text-zinc-400" />
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">Max 4MB • High quality images sell faster</p>
+          </div>
+          {fileError && (
+            <div className="flex items-center gap-1 text-destructive">
+              <AlertCircle className="h-3 w-3" />
+              <p className="text-[10px] font-bold uppercase">{fileError}</p>
+            </div>
+          )}
         </div>
-        <textarea
-          id="description"
-          name="description"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          rows={4}
-          required
-          maxLength={2000}
-          placeholder="Describe your product in detail..."
-          className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-        ></textarea>
       </div>
 
-      <div>
-        <label htmlFor="image" className="block text-sm font-medium text-zinc-700 mb-1">
-          Product Image
-        </label>
-        <input
-          type="file"
-          id="image"
-          name="image"
-          accept="image/*"
-          required
-          onChange={handleFileChange}
-          className="block w-full rounded-lg border border-zinc-300 px-4 py-3 text-zinc-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-        />
-        <p className="mt-2 text-xs text-zinc-500 italic">Upload a clear photo of your product.</p>
-        {fileError && <p className="mt-2 text-xs font-semibold text-red-600">{fileError}</p>}
-      </div>
-
-      <div className="pt-4">
-        <button
-          type="submit"
-          disabled={isPending || Boolean(fileError) || Boolean(priceError)}
-          className="w-full rounded-full bg-blue-600 px-6 py-4 text-sm font-bold text-white transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isPending ? 'Listing product...' : 'List Product for Sale'}
-        </button>
-      </div>
+      <Button
+        type="submit"
+        size="xl"
+        disabled={isPending || Boolean(fileError) || Boolean(priceError)}
+        className="w-full rounded-full py-8 text-lg font-bold shadow-xl shadow-blue-500/20 active:scale-[0.98] transition-all"
+      >
+        {isPending ? (
+          <>
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            Listing product...
+          </>
+        ) : (
+          <>
+            <Package className="mr-2 h-5 w-5" />
+            List Product for Sale
+          </>
+        )}
+      </Button>
     </form>
   );
 }

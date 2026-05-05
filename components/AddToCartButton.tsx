@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { addToCart } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
-
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { ShoppingCart } from 'lucide-react';
 
 export default function AddToCartButton({ productId }: { productId: number }) {
   const [isPending, setIsPending] = useState(false);
@@ -28,14 +29,13 @@ export default function AddToCartButton({ productId }: { productId: number }) {
   }
 
   return (
-    <div className="w-full">
-      <button
-        onClick={handleAddToCart}
-        disabled={isPending}
-        className="w-full rounded-full bg-black py-4 text-base font-bold text-white transition-all hover:bg-zinc-800 shadow-lg active:scale-[0.98] disabled:opacity-50"
-      >
-        {isPending ? 'Adding...' : 'Add to Cart'}
-      </button>
-    </div>
+    <Button
+      onClick={handleAddToCart}
+      disabled={isPending}
+      className="w-full rounded-full py-6 text-base font-bold shadow-lg transition-all active:scale-[0.98]"
+    >
+      <ShoppingCart className="mr-2 h-5 w-5" />
+      {isPending ? 'Adding...' : 'Add to Cart'}
+    </Button>
   );
 }

@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { buyNow } from "@/lib/actions";
 import { parsePriceToDecimal, formatPrice } from "@/lib/currency";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { X, Wallet, Smartphone, CreditCard, ChevronRight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function BuyNowButton({ productId, balance, price }: { productId: number, balance: string, price: string }) {
   const [isPending, startTransition] = useTransition();
@@ -35,70 +41,97 @@ export default function BuyNowButton({ productId, balance, price }: { productId:
     });
   };
 
-  const isBalanceLow = parsePriceToDecimal(balance) < parsePriceToDecimal(price);
+  const isBalanceLow = paymentMethod === 'wallet' && parsePriceToDecimal(balance) < parsePriceToDecimal(price);
 
   return (
     <div className="w-full space-y-4">
       {!showPayment ? (
-        <button
+        <Button
           onClick={() => setShowPayment(true)}
-          className="flex w-full items-center justify-center rounded-full bg-black px-6 py-4 text-sm font-bold text-white transition-all hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-full py-6 text-base font-bold shadow-lg transition-all active:scale-[0.98]"
         >
           Buy Now
-        </button>
+          <ChevronRight className="ml-2 h-5 w-5" />
+        </Button>
       ) : (
-        <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-200 animate-in slide-in-from-top-4 duration-300">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-black text-zinc-900 uppercase tracking-wider">Checkout</h3>
-            <button onClick={() => setShowPayment(false)} className="text-zinc-400 hover:text-black">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </div>
-
-          <div className="space-y-3 mb-4">
-            <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'wallet' ? 'border-blue-600 bg-blue-50' : 'border-white bg-white hover:border-zinc-200'}`}>
-              <input type="radio" name="buyNowPayment" value="wallet" checked={paymentMethod === 'wallet'} onChange={(e) => setPaymentMethod(e.target.value)} className="h-4 w-4 text-blue-600" />
-              <div className="flex-grow text-left">
-                <p className="text-xs font-bold text-zinc-900">Wallet Balance</p>
-                <p className="text-[10px] text-zinc-500 font-medium">{formatPrice(balance)}</p>
-              </div>
-            </label>
-
-            <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'gcash' ? 'border-blue-600 bg-blue-50' : 'border-white bg-white hover:border-zinc-200'}`}>
-              <input type="radio" name="buyNowPayment" value="gcash" checked={paymentMethod === 'gcash'} onChange={(e) => setPaymentMethod(e.target.value)} className="h-4 w-4 text-blue-600" />
-              <div className="flex-grow text-left">
-                <p className="text-xs font-bold text-zinc-900">GCash / Maya</p>
-                <p className="text-[10px] text-zinc-500 font-medium">External wallet</p>
-              </div>
-            </label>
-
-            <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-blue-600 bg-blue-50' : 'border-white bg-white hover:border-zinc-200'}`}>
-              <input type="radio" name="buyNowPayment" value="card" checked={paymentMethod === 'card'} onChange={(e) => setPaymentMethod(e.target.value)} className="h-4 w-4 text-blue-600" />
-              <div className="flex-grow text-left">
-                <p className="text-xs font-bold text-zinc-900">Credit / Debit Card</p>
-                <p className="text-[10px] text-zinc-500 font-medium">Visa / Mastercard</p>
-              </div>
-            </label>
-          </div>
-
-          {paymentMethod !== 'wallet' && (
-            <div className="mb-4 animate-in fade-in duration-200">
-               <input 
-                  type="text" 
-                  placeholder={paymentMethod === 'gcash' ? "Mobile Number" : "Card Number"} 
-                  className="w-full text-xs p-2.5 rounded-lg border border-zinc-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
+        <Card className="bg-zinc-50 border-zinc-200 animate-in slide-in-from-top-4 duration-300">
+          <CardContent className="p-4 flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-black text-zinc-900 uppercase tracking-wider">Checkout</h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowPayment(false)} className="h-8 w-8 text-zinc-400">
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-          )}
 
-          <button
-            onClick={handleBuyNow}
-            disabled={isPending || isBalanceLow}
-            className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-          >
-            {isPending ? "Processing..." : isBalanceLow ? "Insufficient Balance" : `Pay ${formatPrice(price)}`}
-          </button>
-        </div>
+            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="gap-3">
+              <div className="flex items-center space-x-2">
+                <Label
+                  htmlFor="wallet"
+                  className={`flex items-center flex-1 gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'wallet' ? 'border-blue-600 bg-blue-50' : 'border-white bg-white hover:border-zinc-200'}`}
+                >
+                  <RadioGroupItem value="wallet" id="wallet" className="sr-only" />
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Wallet className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-grow">
+                    <p className="text-xs font-bold text-zinc-900">Wallet Balance</p>
+                    <p className="text-[10px] text-zinc-500 font-medium">{formatPrice(balance)}</p>
+                  </div>
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Label
+                  htmlFor="gcash"
+                  className={`flex items-center flex-1 gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'gcash' ? 'border-blue-600 bg-blue-50' : 'border-white bg-white hover:border-zinc-200'}`}
+                >
+                  <RadioGroupItem value="gcash" id="gcash" className="sr-only" />
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Smartphone className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div className="flex-grow">
+                    <p className="text-xs font-bold text-zinc-900">GCash / Maya</p>
+                    <p className="text-[10px] text-zinc-500 font-medium">External wallet</p>
+                  </div>
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Label
+                  htmlFor="card"
+                  className={`flex items-center flex-1 gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-blue-600 bg-blue-50' : 'border-white bg-white hover:border-zinc-200'}`}
+                >
+                  <RadioGroupItem value="card" id="card" className="sr-only" />
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <CreditCard className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <div className="flex-grow">
+                    <p className="text-xs font-bold text-zinc-900">Credit / Debit Card</p>
+                    <p className="text-[10px] text-zinc-500 font-medium">Visa / Mastercard</p>
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {paymentMethod !== 'wallet' && (
+              <div className="animate-in fade-in duration-200">
+                 <Input 
+                    type="text" 
+                    placeholder={paymentMethod === 'gcash' ? "Mobile Number" : "Card Number"} 
+                    className="bg-white"
+                  />
+              </div>
+            )}
+
+            <Button
+              onClick={handleBuyNow}
+              disabled={isPending || isBalanceLow}
+              className="w-full py-6 font-bold shadow-lg"
+            >
+              {isPending ? "Processing..." : isBalanceLow ? "Insufficient Balance" : `Pay ${formatPrice(price)}`}
+            </Button>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

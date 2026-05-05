@@ -185,7 +185,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
                   ...(cat !== 'All' ? { category: cat } : {}),
                   ...(searchQuery ? { q: searchQuery } : {})
                 }).toString()}`}
-                className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap border ${
+                className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all border ${
                   (selectedCategory === cat || (!selectedCategory && cat === 'All'))
                     ? 'bg-zinc-900 text-white border-zinc-900 shadow-lg shadow-zinc-200 scale-105'
                     : 'bg-white text-zinc-500 border-zinc-200 hover:border-zinc-400 hover:text-zinc-900'

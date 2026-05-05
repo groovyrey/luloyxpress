@@ -564,6 +564,16 @@ export async function addToCart(productId: number) {
   }
 }
 
+export const getUserBalance = cache(async (userId: string): Promise<string> => {
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>("SELECT balance FROM users WHERE id = ?", [userId]);
+    return rows[0]?.balance || "0";
+  } catch (error) {
+    console.error('Error getting user balance:', error);
+    return "0";
+  }
+});
+
 export const getCartCount = cache(async (): Promise<number> => {
   const session = await auth();
   if (!session || !session.user?.id) return 0;

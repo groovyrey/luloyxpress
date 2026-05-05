@@ -139,7 +139,7 @@ export default function ChatClient({
               <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">Inquiring about</p>
               <Link 
                 href={`/products/${productContext.id}`}
-                className="text-sm font-bold text-zinc-900 hover:text-blue-600 transition-colors line-clamp-1"
+                className="text-sm font-bold text-zinc-900 hover:text-blue-600 transition-colors line-clamp-2 leading-tight"
               >
                 {productContext.name}
               </Link>

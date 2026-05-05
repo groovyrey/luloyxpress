@@ -1,199 +1,400 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import { useLiveUpdates } from "./LiveUpdatesProvider";
 import { formatPrice } from "@/lib/currency";
+import { 
+  Search, 
+  ShoppingBag, 
+  MessageSquare, 
+  Menu, 
+  X, 
+  LogOut, 
+  User, 
+  Gem, 
+  PlusCircle, 
+  LayoutDashboard,
+  Store,
+  Sparkles,
+  Wallet,
+  Home,
+  Pin,
+  PanelLeftClose,
+  PanelLeft
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+interface SidebarContentProps {
+  userId?: string;
+  userName?: string;
+  displayBalance: string;
+  displayCartCount: number;
+  unreadMessages: number;
+  setUnreadMessages: (count: number) => void;
+  pathname: string;
+  isSidebarPinned: boolean;
+  setIsSidebarPinned: (pinned: boolean) => void;
+  setIsSidebarOpen: (open: boolean) => void;
+  collapsed?: boolean;
+  isMobile?: boolean;
+}
+
+const SidebarContent = ({ 
+  userId, 
+  userName, 
+  displayBalance, 
+  displayCartCount,
+  unreadMessages, 
+  setUnreadMessages,
+  pathname,
+  isSidebarPinned,
+  setIsSidebarPinned,
+  setIsSidebarOpen,
+  collapsed = false, 
+  isMobile = false 
+}: SidebarContentProps) => {
+  const navLinks = [
+    { name: "Home", href: "/", icon: Home },
+    { name: "Shop All", href: "/shop", icon: Store },
+    { name: "New Arrivals", href: "/new-arrivals", icon: Sparkles },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, authRequired: true },
+    { name: "Membership", href: "/membership", icon: Gem, authRequired: true },
+    { name: "Messages", href: "/messages", icon: MessageSquare, authRequired: true, badge: unreadMessages > 0 ? "dot" : null },
+    { name: "Cart", href: "/cart", icon: ShoppingBag, badge: displayCartCount > 0 ? (displayCartCount > 99 ? '99+' : displayCartCount) : null },
+  ];
+
+  return (
+    <div className="flex flex-col h-full bg-white font-sans overflow-y-auto overflow-x-hidden">
+      {/* Sidebar Header with Pin Toggle (Desktop Only) */}
+      {!isMobile && (
+        <div className={cn(
+          "flex items-center px-6 py-4 border-b border-zinc-100",
+          collapsed ? "justify-center" : "justify-between"
+        )}>
+          {!collapsed && <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Menu</span>}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={cn(
+              "h-8 w-8 rounded-lg transition-colors",
+              isSidebarPinned ? "text-blue-600 bg-blue-50" : "text-zinc-400 hover:bg-zinc-100"
+            )}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsSidebarPinned(!isSidebarPinned);
+            }}
+          >
+            {isSidebarPinned ? <PanelLeftClose className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+          </Button>
+        </div>
+      )}
+
+      {/* Profile Section */}
+      <div className={cn(
+        "p-6 border-b border-zinc-100 transition-all duration-300",
+        collapsed ? "bg-white" : "bg-zinc-50/50"
+      )}>
+        {userId ? (
+          <div className="space-y-4">
+            <div className={cn(
+              "flex items-center p-3 bg-white rounded-2xl border border-zinc-100 shadow-sm group transition-all duration-300 overflow-hidden",
+              collapsed ? "justify-center px-2" : "gap-3"
+            )}>
+              <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg uppercase shadow-lg shadow-blue-500/20">
+                {userName?.[0]}
+              </div>
+              <div className={cn(
+                "flex flex-col min-w-0 transition-all duration-300",
+                collapsed ? "opacity-0 w-0 translate-x-4" : "opacity-100 w-auto translate-x-0"
+              )}>
+                <span className="text-sm font-bold text-black leading-tight truncate">{userName}</span>
+                <div className="flex items-center gap-1.5 text-blue-600">
+                  <Wallet className="h-3 w-3" />
+                  <span className="text-xs font-black tracking-tight">{formatPrice(displayBalance)}</span>
+                </div>
+              </div>
+            </div>
+            <div className={cn(
+              "grid gap-2 transition-all duration-300",
+              collapsed ? "grid-cols-1" : "grid-cols-2"
+            )}>
+              <Button 
+                variant="outline" 
+                render={<Link href={`/profile/${userId}`} />} 
+                className="rounded-xl border-zinc-200 h-11 px-0 hover:bg-zinc-50 hover:border-blue-200 transition-colors"
+              >
+                <User className="h-4 w-4" />
+                {!collapsed && <span className="ml-2 font-bold text-xs">Profile</span>}
+              </Button>
+              <Button 
+                variant="destructive" 
+                className="rounded-xl h-11 px-0 shadow-sm" 
+                onClick={() => signOut({ callbackUrl: "/" })}
+              >
+                <LogOut className="h-4 w-4" />
+                {!collapsed && <span className="ml-2 font-bold text-xs">Logout</span>}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Link href="/login" className="block w-full">
+            <Button 
+              className={cn(
+                "w-full h-12 rounded-2xl font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 px-0 transition-all hover:scale-[1.02] active:scale-[0.98]",
+                collapsed ? "flex items-center justify-center" : ""
+              )}
+            >
+              {collapsed ? <User className="h-5 w-5" /> : "Sign In"}
+            </Button>
+          </Link>
+        )}
+      </div>
+
+      <div className="p-6">
+        {/* Navigation Links */}
+        <div className="space-y-1">
+          <h3 className={cn(
+            "px-1 text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-3 transition-opacity duration-300 whitespace-nowrap",
+            collapsed ? "opacity-0" : "opacity-100"
+          )}>
+            Navigation
+          </h3>
+          <nav className="grid gap-1">
+            {navLinks.map((link) => {
+              if (link.authRequired && !userId) return null;
+              const Icon = link.icon;
+              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+              
+              return (
+                <Link 
+                  key={link.name}
+                  href={link.href} 
+                  className={cn(
+                    "group flex items-center p-3 rounded-xl transition-all active:scale-[0.98] overflow-hidden",
+                    isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "hover:bg-zinc-50 text-zinc-700",
+                    collapsed ? "justify-center" : "justify-between"
+                  )}
+                  onClick={() => {
+                    if (link.name === 'Messages') setUnreadMessages(0);
+                    if (isMobile) setIsSidebarOpen(false);
+                  }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={cn(
+                      "p-2 rounded-lg transition-colors shrink-0",
+                      isActive ? "bg-white/20 text-white" : "bg-zinc-50 text-zinc-500 group-hover:bg-zinc-100"
+                    )}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <span className={cn(
+                      "font-bold transition-all duration-300 whitespace-nowrap",
+                      collapsed ? "opacity-0 w-0" : "opacity-100 w-auto ml-3"
+                    )}>
+                      {link.name}
+                    </span>
+                    </div>
+                    {(!collapsed || isMobile) && link.badge && (
+                    link.badge === "dot" ? (
+                      <span className="h-2 w-2 rounded-full bg-red-500 border-2 border-white" />
+                    ) : (
+                      <Badge className={cn(
+                        "h-5 w-fit min-w-[20px] flex items-center justify-center p-1 text-[10px] font-bold border-none",
+                        isActive ? "bg-white text-blue-600" : "bg-blue-600 text-white"
+                      )}>
+                        {link.badge}
+                      </Badge>
+                    )
+                    )}
+                    </Link>
+                    );
+                    })}
+
+                    <Link 
+                    href="/sell" 
+                    className={cn(
+                    "group flex items-center p-3 rounded-xl bg-blue-600/5 hover:bg-blue-600/10 transition-all active:scale-[0.98] mt-4 overflow-hidden border border-blue-600/10",
+                    collapsed ? "justify-center" : "justify-between"
+                    )}
+                    onClick={() => isMobile && setIsSidebarOpen(false)}
+                    >
+                    <div className={cn("flex items-center min-w-0", collapsed ? "justify-center" : "gap-3")}>
+                    <div className="p-2 bg-blue-600 rounded-lg text-white shrink-0 shadow-lg shadow-blue-500/20">
+                    <PlusCircle className="h-5 w-5" />
+                    </div>
+                    <span className={cn(
+                    "font-bold text-blue-600 transition-all duration-300 whitespace-nowrap",
+                    collapsed ? "opacity-0 w-0" : "opacity-100 w-auto ml-3"
+                    )}>
+                    Sell a Product
+                    </span>
+                    </div>
+                    {(!collapsed || isMobile) && <Sparkles className="h-4 w-4 text-blue-400 animate-pulse shrink-0" />}
+                    </Link>          </nav>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function NavbarClient({ 
-  session,
-  initialCartCount,
-  initialBalance
+  session
 }: { 
   session: Session | null;
-  initialCartCount: number;
-  initialBalance: string;
 }) {
-  const { cartCount, balance, unreadMessages, setUnreadMessages } = useLiveUpdates();
+  const pathname = usePathname();
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const { 
+    cartCount, 
+    balance, 
+    unreadMessages, 
+    setUnreadMessages,
+    isSidebarPinned,
+    setIsSidebarPinned,
+    isSidebarExpanded,
+    setIsSidebarExpanded,
+    isSidebarOpen,
+    setIsSidebarOpen
+  } = useLiveUpdates();
   
-  // For now, let's assume we want to use the most "fresh" data.
-  const displayCartCount = cartCount || initialCartCount;
-  const displayBalance = balance === "0" ? initialBalance : balance;
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const displayCartCount = cartCount;
+  const displayBalance = balance;
   const userId = session?.user?.id;
   const userName = session?.user?.name;
 
+  // Sync expanded state with pinned status on load
+  useEffect(() => {
+    setIsSidebarExpanded(isSidebarPinned);
+  }, [isSidebarPinned, setIsSidebarExpanded]);
+
+  // Auto-close mobile menu and search on navigation
+  useEffect(() => {
+    setIsSidebarOpen(false);
+    setIsMobileSearchOpen(false);
+  }, [pathname, setIsSidebarOpen]);
+
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md print:hidden">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="relative h-8 w-8 overflow-hidden rounded-lg">
-                <Image 
-                  src="/logo.png" 
-                  alt="LuloyXpress Logo" 
-                  fill
-                  sizes="32px"
-                  className="object-contain"
-                  priority
-                />
-              </div>
-              <span className="text-2xl font-bold tracking-tighter text-black">
-                LULOY<span className="text-blue-600">XPRESS</span>
-              </span>
-            </Link>
-            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-600">
-              <Link href="/shop" className="hover:text-black transition-colors">Shop All</Link>
-              <Link href="/new-arrivals" className="hover:text-black transition-colors">New Arrivals</Link>
-{session && <Link href="/membership" className="hover:text-black transition-colors">Membership</Link>}
-              <Link href="/sell" className="hover:text-black transition-colors font-semibold text-blue-600">Sell</Link>
+    <>
+      {/* Topbar */}
+      <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md px-4 h-16 flex items-center justify-between print:hidden">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="md:hidden hover:bg-zinc-100 rounded-xl"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="relative h-8 w-8 overflow-hidden rounded-xl bg-blue-600 p-1.5 transition-transform group-hover:scale-110">
+              <Image src="/logo.png" alt="Logo" fill className="object-contain filter invert brightness-0" />
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Desktop Search */}
-            <div className="hidden sm:block mr-2">
-              <form action="/shop" method="GET" className="relative">
-                <input 
-                  type="text"
-                  name="q"
-                  placeholder="Search..."
-                  className="w-40 lg:w-64 rounded-full border border-zinc-200 bg-zinc-50 px-4 py-1.5 pl-10 text-sm transition-all focus:w-64 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                />
-                <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-blue-600 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                </button>
-              </form>
-            </div>
-
-            {/* Cart Icon (Visible on all screens) */}
-            <div className="flex items-center gap-1 mr-2">
-              <Link href="/cart" className="relative p-2 text-zinc-600 hover:text-black transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white border-2 border-white shadow-sm animate-in zoom-in duration-300">
-                  {displayCartCount > 99 ? '99+' : displayCartCount}
-                </span>
-              </Link>
-
-              {userId && (
-                <Link 
-                  href="/messages" 
-                  onClick={() => setUnreadMessages(0)}
-                  className="relative p-2 text-zinc-600 hover:text-black transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                  {unreadMessages > 0 && (
-                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white animate-pulse">
-                      {unreadMessages}
-                    </span>
-                  )}
-                </Link>
-              )}
-            </div>
-
-            {/* Auth Button Desktop */}
-            <div className="hidden md:block">
-              {userId ? (
-                <div className="flex items-center gap-4 border-l border-zinc-200 pl-4">
-                  <div className="flex flex-col items-end">
-                    <Link href={`/profile/${userId}`} className="text-sm font-bold text-zinc-900 hover:text-blue-600 transition-colors">
-                      Hi, {userName?.split(' ')[0]}
-                    </Link>
-                    <span className="text-[11px] font-black text-blue-600">{formatPrice(displayBalance)}</span>
-                  </div>
-                  <button 
-                    onClick={() => signOut({ callbackUrl: "/" })}
-                    className="text-xs font-bold text-zinc-400 hover:text-red-600 transition-colors"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              ) : (
-                <Link href="/login" className="rounded-full bg-black px-5 py-2 text-sm font-bold text-white transition-all hover:bg-zinc-800">
-                  Sign In
-                </Link>
-              )}
-            </div>
-
-            {/* Hamburger Button */}
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-zinc-600 hover:text-black md:hidden"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {isMenuOpen ? (
-                  <path d="M18 6 6 18M6 6l12 12"/>
-                ) : (
-                  <path d="M4 6h16M4 12h16M4 18h16"/>
-                )}
-              </svg>
-            </button>
-          </div>
+            <span className="font-bold text-xl tracking-tighter">
+              LULOY<span className="text-blue-600">XPRESS</span>
+            </span>
+          </Link>
         </div>
-      </div>
 
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden border-t border-zinc-100 bg-white p-4 space-y-4 shadow-lg animate-in slide-in-from-top duration-200">
-          {/* Mobile Search */}
-          <div className="px-2 pb-2">
+        {/* Desktop Search */}
+        <div className="hidden md:flex flex-1 max-w-md mx-8">
+          <form action="/shop" method="GET" className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <Input 
+              type="text"
+              name="q"
+              placeholder="Search products..."
+              className="w-full bg-zinc-50 border-zinc-200 pl-10 h-10 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+            />
+          </form>
+        </div>
+
+        {/* Quick Actions & Mobile Search Toggle */}
+        <div className="flex items-center gap-2">
+          {/* Mobile Search Toggle */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="md:hidden hover:bg-zinc-100 rounded-xl"
+            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+          >
+            {isMobileSearchOpen ? <X className="h-5 w-5 text-zinc-600" /> : <Search className="h-5 w-5 text-zinc-600" />}
+          </Button>
+        </div>
+
+        {/* Mobile Search Bar Expansion */}
+        {isMobileSearchOpen && (
+          <div className="absolute top-16 left-0 right-0 bg-white border-b border-zinc-200 p-4 md:hidden animate-in slide-in-from-top duration-200 shadow-lg">
             <form action="/shop" method="GET" className="relative w-full">
-              <input 
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              <Input 
+                autoFocus
                 type="text"
                 name="q"
                 placeholder="Search products..."
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 pl-10 text-sm transition-all focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                className="w-full bg-zinc-50 border-zinc-200 pl-10 h-12 rounded-xl focus:ring-2 focus:ring-blue-500/20"
               />
-              <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              </button>
             </form>
           </div>
+        )}
+      </header>
 
-          <div className="flex flex-col gap-4 text-base font-medium text-zinc-600">
-            <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="hover:text-black px-2 py-1">Shop All</Link>
-            <Link href="/new-arrivals" onClick={() => setIsMenuOpen(false)} className="hover:text-black px-2 py-1">New Arrivals</Link>
-            {session && <Link href="/membership" onClick={() => setIsMenuOpen(false)} className="hover:text-black px-2 py-1">Membership</Link>}
-            <Link href="/sell" onClick={() => setIsMenuOpen(false)} className="hover:text-black px-2 py-1 font-semibold text-blue-600">Sell</Link>
-          </div>
-          <div className="pt-4 border-t border-zinc-100">
-            {userId ? (
-              <div className="space-y-4 px-2">
-                <div className="flex flex-col">
-                  <Link 
-                    href={`/profile/${userId}`} 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="text-lg font-bold text-black hover:text-blue-600 transition-colors"
-                  >
-                    Hi, {userName?.split(' ')[0]}
-                  </Link>
-                  <span className="text-sm font-black text-blue-600">{formatPrice(displayBalance)}</span>
-                </div>
-                <div className="flex flex-col gap-3">
-                  <button 
-                    onClick={() => signOut({ callbackUrl: "/" })}
-                    className="text-sm font-bold text-red-600 text-left"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <Link 
-                href="/login" 
-                onClick={() => setIsMenuOpen(false)}
-                className="block w-full rounded-xl bg-black py-3 text-center text-sm font-bold text-white"
-              >
-                Sign In
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-    </nav>
+      {/* Mobile Sidebar (Sheet) */}
+      <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+        <SheetContent side="left" className="p-0 w-[300px] border-r-0 shadow-2xl">
+          <SidebarContent 
+            userId={userId}
+            userName={userName || ""}
+            displayBalance={displayBalance}
+            displayCartCount={displayCartCount}
+            unreadMessages={unreadMessages}
+            setUnreadMessages={setUnreadMessages}
+            pathname={pathname}
+            isSidebarPinned={isSidebarPinned}
+            setIsSidebarPinned={setIsSidebarPinned}
+            setIsSidebarOpen={setIsSidebarOpen}
+            isMobile
+          />
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop Sidebar */}
+      <aside 
+        className={cn(
+          "hidden md:flex flex-col h-[calc(100vh-64px)] border-r border-zinc-200 fixed top-16 left-0 print:hidden transition-all duration-300 ease-in-out z-40 bg-white",
+          isSidebarExpanded ? "w-72 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.05)]" : "w-24"
+        )}
+        onMouseEnter={() => setIsSidebarExpanded(true)}
+        onMouseLeave={() => setIsSidebarExpanded(isSidebarPinned)}
+      >
+        <SidebarContent 
+          userId={userId}
+          userName={userName || ""}
+          displayBalance={displayBalance}
+          displayCartCount={displayCartCount}
+          unreadMessages={unreadMessages}
+          setUnreadMessages={setUnreadMessages}
+          pathname={pathname}
+          isSidebarPinned={isSidebarPinned}
+          setIsSidebarPinned={setIsSidebarPinned}
+          setIsSidebarOpen={setIsSidebarOpen}
+          collapsed={!isSidebarExpanded}
+        />
+      </aside>
+    </>
   );
 }

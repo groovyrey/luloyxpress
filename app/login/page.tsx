@@ -6,6 +6,11 @@ import Image from 'next/image';
 import { useActionState, useEffect, Suspense } from 'react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, LogIn } from 'lucide-react';
 
 const initialState: ActionState = {
   error: undefined,
@@ -30,77 +35,88 @@ function LoginContent() {
   }, [state, searchParams]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-2xl shadow-sm border border-zinc-100">
-        <div className="flex flex-col items-center">
-          <Link href="/">
-            <div className="relative h-16 w-16 overflow-hidden rounded-2xl mb-4">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50/50 px-4 py-12 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md border-zinc-100 shadow-xl shadow-zinc-200/50">
+        <CardHeader className="flex flex-col items-center space-y-4 pb-8">
+          <Link href="/" className="transition-transform hover:scale-105 active:scale-95">
+            <div className="relative h-16 w-16 overflow-hidden rounded-2xl shadow-sm border border-zinc-100 bg-white">
               <Image 
                 src="/logo.png" 
                 alt="LuloyXpress Logo" 
                 fill
                 sizes="64px"
-                className="object-contain"
+                className="object-contain p-2"
                 priority
               />
             </div>
           </Link>
-          <h2 className="text-center text-3xl font-bold tracking-tight text-zinc-900">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-zinc-600">
-            Or{' '}
-            <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              create a new account
-            </Link>
-          </p>
-        </div>
-        <form 
-          action={formAction}
-          className="mt-8 space-y-6"
-        >
-          <div className="space-y-4 rounded-md shadow-sm">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="relative block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="Email address"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="relative block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="Password"
-              />
-            </div>
+          <div className="space-y-1 text-center">
+            <CardTitle className="text-3xl font-bold tracking-tight text-zinc-900">
+              Welcome Back
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Sign in to your account or{' '}
+              <Link href="/register" className="font-bold text-blue-600 hover:text-blue-500 transition-colors">
+                create one
+              </Link>
+            </CardDescription>
           </div>
+        </CardHeader>
+        <CardContent>
+          <form action={formAction} className="space-y-6">
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="name@example.com"
+                  className="h-12 bg-zinc-50/50 focus-visible:bg-white transition-all"
+                />
+              </div>
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    Password
+                  </Label>
+                </div>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  placeholder="••••••••"
+                  className="h-12 bg-zinc-50/50 focus-visible:bg-white transition-all"
+                />
+              </div>
+            </div>
 
-          <div>
-            <button
+            <Button
               type="submit"
               disabled={isPending}
-              className="group relative flex w-full justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-12 rounded-full font-bold shadow-lg shadow-blue-500/10 active:scale-[0.98] transition-all"
             >
-              {isPending ? 'Signing in...' : 'Sign in'}
-            </button>
-          </div>
-        </form>
-      </div>
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign In
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -116,3 +132,4 @@ export default function LoginPage() {
     </Suspense>
   );
 }
+

@@ -71,15 +71,19 @@ export default function ConversationsClient({
                 {conv.name.charAt(0)}
               </div>
               <div className="flex-grow min-w-0">
-                <div className="flex justify-between items-baseline mb-1">
-                  <h3 className="font-bold text-zinc-900 truncate">{conv.name}</h3>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase">
+                <div className="flex justify-between items-baseline mb-1 gap-2">
+                  <h3 className="font-bold text-zinc-900 leading-tight">{conv.name}</h3>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase shrink-0">
                     {conv.last_message_at ? new Date(conv.last_message_at).toLocaleDateString() : ''}
                   </span>
                 </div>
-                <p className="text-sm text-zinc-500 truncate font-medium">
+                <p className="text-sm text-zinc-500 font-medium leading-normal line-clamp-1">
                   {isOwn && <span className="text-zinc-400 mr-1">You:</span>}
-                  {conv.last_message || 'Start a conversation...'}
+                  {conv.last_message 
+                    ? (conv.last_message.length > 50 
+                        ? conv.last_message.substring(0, 50) + '...' 
+                        : conv.last_message)
+                    : 'Start a conversation...'}
                 </p>
               </div>
               <div className="text-zinc-300 group-hover:text-blue-600 transition-colors">
