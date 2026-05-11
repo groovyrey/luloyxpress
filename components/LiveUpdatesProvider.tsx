@@ -8,10 +8,6 @@ interface LiveUpdatesContextType {
   balance: string;
   unreadMessages: number;
   setUnreadMessages: (count: number) => void;
-  isSidebarExpanded: boolean;
-  setIsSidebarExpanded: (expanded: boolean) => void;
-  isSidebarPinned: boolean;
-  setIsSidebarPinned: (pinned: boolean) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
 }
@@ -40,20 +36,7 @@ export default function LiveUpdatesProvider({
   const [cartCount, setCartCount] = useState(initialCartCount);
   const [balance, setBalance] = useState(initialBalance);
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // Load pinned state from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebarPinned");
-    if (saved) setIsSidebarPinned(saved === "true");
-  }, []);
-
-  const handleSetSidebarPinned = (pinned: boolean) => {
-    setIsSidebarPinned(pinned);
-    localStorage.setItem("sidebarPinned", String(pinned));
-  };
 
   useEffect(() => {
     if (!userId) return;
@@ -79,10 +62,6 @@ export default function LiveUpdatesProvider({
         balance, 
         unreadMessages, 
         setUnreadMessages,
-        isSidebarPinned,
-        setIsSidebarPinned: handleSetSidebarPinned,
-        isSidebarExpanded,
-        setIsSidebarExpanded,
         isSidebarOpen,
         setIsSidebarOpen
       }}>

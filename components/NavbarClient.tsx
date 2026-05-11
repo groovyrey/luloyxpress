@@ -21,11 +21,8 @@ import {
   LayoutDashboard,
   Store,
   Sparkles,
-  Wallet,
   Home,
-  Pin,
-  PanelLeftClose,
-  PanelLeft
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,37 +31,33 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface SidebarContentProps {
   userId?: string;
-  userName?: string;
-  displayBalance: string;
   displayCartCount: number;
   unreadMessages: number;
   setUnreadMessages: (count: number) => void;
   pathname: string;
-  isSidebarPinned: boolean;
-  setIsSidebarPinned: (pinned: boolean) => void;
   setIsSidebarOpen: (open: boolean) => void;
-  collapsed?: boolean;
-  isMobile?: boolean;
 }
 
 const SidebarContent = ({ 
   userId, 
-  userName, 
-  displayBalance, 
   displayCartCount,
   unreadMessages, 
   setUnreadMessages,
   pathname,
-  isSidebarPinned,
-  setIsSidebarPinned,
   setIsSidebarOpen,
-  collapsed = false, 
-  isMobile = false 
 }: SidebarContentProps) => {
   const navLinks = [
     { name: "Home", href: "/", icon: Home },
@@ -74,103 +67,14 @@ const SidebarContent = ({
     { name: "Membership", href: "/membership", icon: Gem, authRequired: true },
     { name: "Messages", href: "/messages", icon: MessageSquare, authRequired: true, badge: unreadMessages > 0 ? "dot" : null },
     { name: "Cart", href: "/cart", icon: ShoppingBag, badge: displayCartCount > 0 ? (displayCartCount > 99 ? '99+' : displayCartCount) : null },
+    { name: "Docs", href: "/docs", icon: FileText },
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white font-sans overflow-y-auto overflow-x-hidden">
-      {/* Sidebar Header with Pin Toggle (Desktop Only) */}
-      {!isMobile && (
-        <div className={cn(
-          "flex items-center px-6 py-4 border-b border-zinc-100",
-          collapsed ? "justify-center" : "justify-between"
-        )}>
-          {!collapsed && <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Menu</span>}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={cn(
-              "h-8 w-8 rounded-lg transition-colors",
-              isSidebarPinned ? "text-blue-600 bg-blue-50" : "text-zinc-400 hover:bg-zinc-100"
-            )}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsSidebarPinned(!isSidebarPinned);
-            }}
-          >
-            {isSidebarPinned ? <PanelLeftClose className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-          </Button>
-        </div>
-      )}
-
-      {/* Profile Section */}
-      <div className={cn(
-        "p-6 border-b border-zinc-100 transition-all duration-300",
-        collapsed ? "bg-white" : "bg-zinc-50/50"
-      )}>
-        {userId ? (
-          <div className="space-y-4">
-            <div className={cn(
-              "flex items-center p-3 bg-white rounded-2xl border border-zinc-100 shadow-sm group transition-all duration-300 overflow-hidden",
-              collapsed ? "justify-center px-2" : "gap-3"
-            )}>
-              <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg uppercase shadow-lg shadow-blue-500/20">
-                {userName?.[0]}
-              </div>
-              <div className={cn(
-                "flex flex-col min-w-0 transition-all duration-300",
-                collapsed ? "opacity-0 w-0 translate-x-4" : "opacity-100 w-auto translate-x-0"
-              )}>
-                <span className="text-sm font-bold text-black leading-tight truncate">{userName}</span>
-                <div className="flex items-center gap-1.5 text-blue-600">
-                  <Wallet className="h-3 w-3" />
-                  <span className="text-xs font-black tracking-tight">{formatPrice(displayBalance)}</span>
-                </div>
-              </div>
-            </div>
-            <div className={cn(
-              "grid gap-2 transition-all duration-300",
-              collapsed ? "grid-cols-1" : "grid-cols-2"
-            )}>
-              <Button 
-                variant="outline" 
-                render={<Link href={`/profile/${userId}`} />} 
-                className="rounded-xl border-zinc-200 h-11 px-0 hover:bg-zinc-50 hover:border-blue-200 transition-colors"
-              >
-                <User className="h-4 w-4" />
-                {!collapsed && <span className="ml-2 font-bold text-xs">Profile</span>}
-              </Button>
-              <Button 
-                variant="destructive" 
-                className="rounded-xl h-11 px-0 shadow-sm" 
-                onClick={() => signOut({ callbackUrl: "/" })}
-              >
-                <LogOut className="h-4 w-4" />
-                {!collapsed && <span className="ml-2 font-bold text-xs">Logout</span>}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Link href="/login" className="block w-full">
-            <Button 
-              className={cn(
-                "w-full h-12 rounded-2xl font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 px-0 transition-all hover:scale-[1.02] active:scale-[0.98]",
-                collapsed ? "flex items-center justify-center" : ""
-              )}
-            >
-              {collapsed ? <User className="h-5 w-5" /> : "Sign In"}
-            </Button>
-          </Link>
-        )}
-      </div>
-
+    <div className="flex flex-col h-full bg-white font-sans overflow-y-auto">
       <div className="p-6">
-        {/* Navigation Links */}
         <div className="space-y-1">
-          <h3 className={cn(
-            "px-1 text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-3 transition-opacity duration-300 whitespace-nowrap",
-            collapsed ? "opacity-0" : "opacity-100"
-          )}>
+          <h3 className="px-1 text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-3">
             Navigation
           </h3>
           <nav className="grid gap-1">
@@ -184,30 +88,24 @@ const SidebarContent = ({
                   key={link.name}
                   href={link.href} 
                   className={cn(
-                    "group flex items-center p-3 rounded-xl transition-all active:scale-[0.98] overflow-hidden",
-                    isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "hover:bg-zinc-50 text-zinc-700",
-                    collapsed ? "justify-center" : "justify-between"
+                    "group flex items-center justify-between p-3 rounded-xl transition-all active:scale-[0.98]",
+                    isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "hover:bg-zinc-50 text-zinc-700"
                   )}
                   onClick={() => {
                     if (link.name === 'Messages') setUnreadMessages(0);
-                    if (isMobile) setIsSidebarOpen(false);
+                    setIsSidebarOpen(false);
                   }}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3">
                     <div className={cn(
-                      "p-2 rounded-lg transition-colors shrink-0",
+                      "p-2 rounded-lg transition-colors",
                       isActive ? "bg-white/20 text-white" : "bg-zinc-50 text-zinc-500 group-hover:bg-zinc-100"
                     )}>
                       <Icon className="h-5 w-5" />
                     </div>
-                    <span className={cn(
-                      "font-bold transition-all duration-300 whitespace-nowrap",
-                      collapsed ? "opacity-0 w-0" : "opacity-100 w-auto ml-3"
-                    )}>
-                      {link.name}
-                    </span>
-                    </div>
-                    {(!collapsed || isMobile) && link.badge && (
+                    <span className="font-bold">{link.name}</span>
+                  </div>
+                  {link.badge && (
                     link.badge === "dot" ? (
                       <span className="h-2 w-2 rounded-full bg-red-500 border-2 border-white" />
                     ) : (
@@ -218,37 +116,31 @@ const SidebarContent = ({
                         {link.badge}
                       </Badge>
                     )
-                    )}
-                    </Link>
-                    );
-                    })}
+                  )}
+                </Link>
+              );
+            })}
 
-                    <Link 
-                    href="/sell" 
-                    className={cn(
-                    "group flex items-center p-3 rounded-xl bg-blue-600/5 hover:bg-blue-600/10 transition-all active:scale-[0.98] mt-4 overflow-hidden border border-blue-600/10",
-                    collapsed ? "justify-center" : "justify-between"
-                    )}
-                    onClick={() => isMobile && setIsSidebarOpen(false)}
-                    >
-                    <div className={cn("flex items-center min-w-0", collapsed ? "justify-center" : "gap-3")}>
-                    <div className="p-2 bg-blue-600 rounded-lg text-white shrink-0 shadow-lg shadow-blue-500/20">
-                    <PlusCircle className="h-5 w-5" />
-                    </div>
-                    <span className={cn(
-                    "font-bold text-blue-600 transition-all duration-300 whitespace-nowrap",
-                    collapsed ? "opacity-0 w-0" : "opacity-100 w-auto ml-3"
-                    )}>
-                    Sell a Product
-                    </span>
-                    </div>
-                    {(!collapsed || isMobile) && <Sparkles className="h-4 w-4 text-blue-400 animate-pulse shrink-0" />}
-                    </Link>          </nav>
+            <Link 
+              href="/sell" 
+              className="group flex items-center justify-between p-3 rounded-xl bg-blue-600/5 hover:bg-blue-600/10 transition-all active:scale-[0.98] mt-4 border border-blue-600/10"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600 rounded-lg text-white shadow-lg shadow-blue-500/20">
+                  <PlusCircle className="h-5 w-5" />
+                </div>
+                <span className="font-bold text-blue-600">Sell a Product</span>
+              </div>
+              <Sparkles className="h-4 w-4 text-blue-400 animate-pulse" />
+            </Link>
+          </nav>
         </div>
       </div>
     </div>
   );
 };
+
 
 export default function NavbarClient({ 
   session
@@ -262,10 +154,6 @@ export default function NavbarClient({
     balance, 
     unreadMessages, 
     setUnreadMessages,
-    isSidebarPinned,
-    setIsSidebarPinned,
-    isSidebarExpanded,
-    setIsSidebarExpanded,
     isSidebarOpen,
     setIsSidebarOpen
   } = useLiveUpdates();
@@ -275,12 +163,7 @@ export default function NavbarClient({
   const userId = session?.user?.id;
   const userName = session?.user?.name;
 
-  // Sync expanded state with pinned status on load
-  useEffect(() => {
-    setIsSidebarExpanded(isSidebarPinned);
-  }, [isSidebarPinned, setIsSidebarExpanded]);
-
-  // Auto-close mobile menu and search on navigation
+  // Auto-close menu and search on navigation
   useEffect(() => {
     setIsSidebarOpen(false);
     setIsMobileSearchOpen(false);
@@ -294,7 +177,7 @@ export default function NavbarClient({
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden hover:bg-zinc-100 rounded-xl"
+            className="hover:bg-zinc-100 rounded-xl"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           >
             <Menu className="h-6 w-6" />
@@ -323,8 +206,8 @@ export default function NavbarClient({
           </form>
         </div>
 
-        {/* Quick Actions & Mobile Search Toggle */}
-        <div className="flex items-center gap-2">
+        {/* Quick Actions */}
+        <div className="flex items-center gap-1 md:gap-2">
           {/* Mobile Search Toggle */}
           <Button 
             variant="ghost" 
@@ -334,6 +217,84 @@ export default function NavbarClient({
           >
             {isMobileSearchOpen ? <X className="h-5 w-5 text-zinc-600" /> : <Search className="h-5 w-5 text-zinc-600" />}
           </Button>
+
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            render={<Link href="/sell" />}
+            nativeButton={false}
+            className="hidden sm:flex hover:bg-zinc-100 rounded-xl text-zinc-600"
+          >
+            <PlusCircle className="h-5 w-5" />
+          </Button>
+
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            render={<Link href="/cart" />}
+            nativeButton={false}
+            className="hover:bg-zinc-100 rounded-xl text-zinc-600 relative"
+          >
+            <ShoppingBag className="h-5 w-5" />
+            {displayCartCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] font-bold bg-blue-600 text-white border-2 border-white">
+                {displayCartCount > 99 ? '99+' : displayCartCount}
+              </Badge>
+            )}
+          </Button>
+
+          {userId ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button variant="ghost" className="p-1 hover:bg-zinc-100 rounded-xl gap-2 h-10 group" />}>
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs uppercase shadow-sm group-hover:shadow-blue-500/20 transition-all">
+                {userName?.[0]}
+              </div>
+              <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
+                <span className="text-xs font-bold text-black truncate max-w-[80px]">{userName}</span>
+                <span className="text-[10px] font-black text-blue-600">{formatPrice(displayBalance)}</span>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-xl border-zinc-100">
+              <DropdownMenuLabel className="px-3 py-2">
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">My Account</p>
+                  <p className="text-sm font-bold text-blue-600">{formatPrice(displayBalance)}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="mx-2 bg-zinc-100" />
+              <DropdownMenuItem render={<Link href={`/profile/${userId}`} className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors" />}>
+                <User className="h-4 w-4 text-zinc-500" />
+                <span className="font-bold text-sm">Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/dashboard" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors" />}>
+                <LayoutDashboard className="h-4 w-4 text-zinc-500" />
+                <span className="font-bold text-sm">Dashboard</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/membership" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors" />}>
+                <Gem className="h-4 w-4 text-zinc-500" />
+                <span className="font-bold text-sm">Membership</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/docs" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors" />}>
+                <FileText className="h-4 w-4 text-zinc-500" />
+                <span className="font-bold text-sm">Documentation</span>
+              </DropdownMenuItem>
+                <DropdownMenuSeparator className="mx-2 bg-zinc-100" />
+                <DropdownMenuItem 
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer text-red-600 hover:bg-red-50 transition-colors focus:bg-red-50 focus:text-red-600"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="font-bold text-sm">Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link href="/login">
+              <Button size="sm" className="rounded-xl font-bold bg-blue-600 hover:bg-blue-700 shadow-sm transition-all h-9 px-4">
+                Sign In
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Mobile Search Bar Expansion */}
@@ -353,48 +314,27 @@ export default function NavbarClient({
         )}
       </header>
 
-      {/* Mobile Sidebar (Sheet) */}
+      {/* Unified Navigation Drawer */}
       <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
         <SheetContent side="left" className="p-0 w-[300px] border-r-0 shadow-2xl">
+          <div className="flex items-center gap-2 p-6 border-b border-zinc-100">
+            <div className="h-8 w-8 overflow-hidden rounded-xl bg-blue-600 p-1.5">
+              <Image src="/logo.png" alt="Logo" width={32} height={32} className="object-contain filter invert brightness-0" />
+            </div>
+            <span className="font-bold text-xl tracking-tighter">
+              LULOY<span className="text-blue-600">XPRESS</span>
+            </span>
+          </div>
           <SidebarContent 
             userId={userId}
-            userName={userName || ""}
-            displayBalance={displayBalance}
             displayCartCount={displayCartCount}
             unreadMessages={unreadMessages}
             setUnreadMessages={setUnreadMessages}
             pathname={pathname}
-            isSidebarPinned={isSidebarPinned}
-            setIsSidebarPinned={setIsSidebarPinned}
             setIsSidebarOpen={setIsSidebarOpen}
-            isMobile
           />
         </SheetContent>
       </Sheet>
-
-      {/* Desktop Sidebar */}
-      <aside 
-        className={cn(
-          "hidden md:flex flex-col h-[calc(100vh-64px)] border-r border-zinc-200 fixed top-16 left-0 print:hidden transition-all duration-300 ease-in-out z-40 bg-white",
-          isSidebarExpanded ? "w-72 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.05)]" : "w-24"
-        )}
-        onMouseEnter={() => setIsSidebarExpanded(true)}
-        onMouseLeave={() => setIsSidebarExpanded(isSidebarPinned)}
-      >
-        <SidebarContent 
-          userId={userId}
-          userName={userName || ""}
-          displayBalance={displayBalance}
-          displayCartCount={displayCartCount}
-          unreadMessages={unreadMessages}
-          setUnreadMessages={setUnreadMessages}
-          pathname={pathname}
-          isSidebarPinned={isSidebarPinned}
-          setIsSidebarPinned={setIsSidebarPinned}
-          setIsSidebarOpen={setIsSidebarOpen}
-          collapsed={!isSidebarExpanded}
-        />
-      </aside>
     </>
   );
 }

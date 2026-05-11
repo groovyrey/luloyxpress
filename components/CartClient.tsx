@@ -120,7 +120,7 @@ export default function CartClient({ cartItems, balance }: CartClientProps) {
           </div>
           <CardTitle className="text-2xl font-bold mb-2">Your cart is empty</CardTitle>
           <p className="text-muted-foreground mb-8 max-w-xs">Looks like you haven&apos;t added anything to your cart yet.</p>
-          <Button render={<Link href="/shop" />} size="lg" className="rounded-full px-8">
+          <Button render={<Link href="/shop" />} nativeButton={false} size="lg" className="rounded-full px-8">
             Start Shopping
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
