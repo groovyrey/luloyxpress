@@ -262,21 +262,29 @@ export default function NavbarClient({
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="mx-2 bg-zinc-100" />
-              <DropdownMenuItem render={<Link href={`/profile/${userId}`} className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors" />}>
-                <User className="h-4 w-4 text-zinc-500" />
-                <span className="font-bold text-sm">Profile</span>
+              <DropdownMenuItem className="p-0">
+                <Link href={`/profile/${userId}`} className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors w-full">
+                  <User className="h-4 w-4 text-zinc-500" />
+                  <span className="font-bold text-sm">Profile</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/dashboard" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors" />}>
-                <LayoutDashboard className="h-4 w-4 text-zinc-500" />
-                <span className="font-bold text-sm">Dashboard</span>
+              <DropdownMenuItem className="p-0">
+                <Link href="/dashboard" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors w-full">
+                  <LayoutDashboard className="h-4 w-4 text-zinc-500" />
+                  <span className="font-bold text-sm">Dashboard</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/membership" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors" />}>
-                <Gem className="h-4 w-4 text-zinc-500" />
-                <span className="font-bold text-sm">Membership</span>
+              <DropdownMenuItem className="p-0">
+                <Link href="/membership" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors w-full">
+                  <Gem className="h-4 w-4 text-zinc-500" />
+                  <span className="font-bold text-sm">Membership</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/docs" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors" />}>
-                <FileText className="h-4 w-4 text-zinc-500" />
-                <span className="font-bold text-sm">Documentation</span>
+              <DropdownMenuItem className="p-0">
+                <Link href="/docs" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors w-full">
+                  <FileText className="h-4 w-4 text-zinc-500" />
+                  <span className="font-bold text-sm">Documentation</span>
+                </Link>
               </DropdownMenuItem>
                 <DropdownMenuSeparator className="mx-2 bg-zinc-100" />
                 <DropdownMenuItem 

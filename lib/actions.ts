@@ -110,8 +110,12 @@ export async function register(prevState: ActionState, formData: FormData): Prom
     const userId = result.insertId;
 
     if (enableFace2FA) {
-      const callbackUrl = `${process.env.NEXTAUTH_URL || 'https://luloyxpress.vercel.app'}/api/auth/face-register-callback?id=${userId}`;
-      const lufaceUrl = `${process.env.LUFACE_URL}/setup-face?api_key=${process.env.LUFACE_API_KEY}&email=${encodeURIComponent(email)}&username=${encodeURIComponent(name)}&redirect_url=${encodeURIComponent(callbackUrl)}`;
+      const baseURL = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https://luloyxpress.vercel.app';
+      const lufaceURL = process.env.LUFACE_URL || 'https://luface.vercel.app';
+      const lufaceKey = process.env.LUFACE_API_KEY || 'luface_default_key';
+
+      const callbackUrl = `${baseURL.replace(/\/$/, '')}/api/auth/face-register-callback?id=${userId}`;
+      const lufaceUrl = `${lufaceURL.replace(/\/$/, '')}/setup-face?api_key=${lufaceKey}&email=${encodeURIComponent(email)}&username=${encodeURIComponent(name)}&redirect_url=${encodeURIComponent(callbackUrl)}`;
       
       return { success: true, redirectUrl: lufaceUrl };
     }
@@ -231,8 +235,12 @@ export async function loginAction(prevState: ActionState, formData: FormData): P
         }
 
         // Redirect to Luface for 2FA
-        const callbackUrl = `${process.env.NEXTAUTH_URL || 'https://luloyxpress.vercel.app'}/api/auth/face-callback?email=${encodeURIComponent(email)}&p=${encodeURIComponent(password)}`;
-        const lufaceUrl = `${process.env.LUFACE_URL}/verify?api_key=${process.env.LUFACE_API_KEY}&email=${encodeURIComponent(email)}&redirect_url=${encodeURIComponent(callbackUrl)}`;
+        const baseURL = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https://luloyxpress.vercel.app';
+        const lufaceURL = process.env.LUFACE_URL || 'https://luface.vercel.app';
+        const lufaceKey = process.env.LUFACE_API_KEY || 'luface_default_key';
+
+        const callbackUrl = `${baseURL.replace(/\/$/, '')}/api/auth/face-callback?email=${encodeURIComponent(email)}&p=${encodeURIComponent(password)}`;
+        const lufaceUrl = `${lufaceURL.replace(/\/$/, '')}/verify?api_key=${lufaceKey}&email=${encodeURIComponent(email)}&redirect_url=${encodeURIComponent(callbackUrl)}`;
         
         return { success: true, redirectUrl: lufaceUrl };
       }
@@ -265,10 +273,15 @@ export async function toggleFace2FA(enabled: boolean) {
     if (enabled) {
       // If enabling, we need to redirect them to Luface to register their face first
       const [user]: any = await pool.query("SELECT email, name FROM users WHERE id = ?", [session.user.id]);
-      const callbackUrl = `${process.env.NEXTAUTH_URL || 'https://luloyxpress.vercel.app'}/api/auth/face-register-callback?id=${session.user.id}`;
+      
+      const baseURL = process.env.NEXTAUTH_URL || process.env.AUTH_URL || 'https://luloyxpress.vercel.app';
+      const lufaceURL = process.env.LUFACE_URL || 'https://luface.vercel.app';
+      const lufaceKey = process.env.LUFACE_API_KEY || 'luface_default_key';
+
+      const callbackUrl = `${baseURL.replace(/\/$/, '')}/api/auth/face-register-callback?id=${session.user.id}`;
 
       // Use the new streamlined setup-face page
-      const lufaceUrl = `${process.env.LUFACE_URL}/setup-face?api_key=${process.env.LUFACE_API_KEY}&email=${encodeURIComponent(user[0].email)}&username=${encodeURIComponent(user[0].name)}&redirect_url=${encodeURIComponent(callbackUrl)}`;
+      const lufaceUrl = `${lufaceURL.replace(/\/$/, '')}/setup-face?api_key=${lufaceKey}&email=${encodeURIComponent(user[0].email)}&username=${encodeURIComponent(user[0].name)}&redirect_url=${encodeURIComponent(callbackUrl)}`;
 
       return { success: true, redirectUrl: lufaceUrl };
     }
