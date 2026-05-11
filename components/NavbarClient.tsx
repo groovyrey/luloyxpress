@@ -34,6 +34,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -255,12 +256,14 @@ export default function NavbarClient({
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-xl border-zinc-100">
-              <DropdownMenuLabel className="px-3 py-2">
-                <div className="flex flex-col gap-0.5">
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">My Account</p>
-                  <p className="text-sm font-bold text-blue-600">{formatPrice(displayBalance)}</p>
-                </div>
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="px-3 py-2">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">My Account</p>
+                    <p className="text-sm font-bold text-blue-600">{formatPrice(displayBalance)}</p>
+                  </div>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator className="mx-2 bg-zinc-100" />
               <DropdownMenuItem className="p-0">
                 <Link href={`/profile/${userId}`} className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors w-full">
@@ -268,33 +271,15 @@ export default function NavbarClient({
                   <span className="font-bold text-sm">Profile</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="p-0">
-                <Link href="/dashboard" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors w-full">
-                  <LayoutDashboard className="h-4 w-4 text-zinc-500" />
-                  <span className="font-bold text-sm">Dashboard</span>
-                </Link>
+              <DropdownMenuSeparator className="mx-2 bg-zinc-100" />
+              <DropdownMenuItem 
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer text-red-600 hover:bg-red-50 transition-colors focus:bg-red-50 focus:text-red-600"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="font-bold text-sm">Logout</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="p-0">
-                <Link href="/membership" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors w-full">
-                  <Gem className="h-4 w-4 text-zinc-500" />
-                  <span className="font-bold text-sm">Membership</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="p-0">
-                <Link href="/docs" className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-zinc-50 transition-colors w-full">
-                  <FileText className="h-4 w-4 text-zinc-500" />
-                  <span className="font-bold text-sm">Documentation</span>
-                </Link>
-              </DropdownMenuItem>
-                <DropdownMenuSeparator className="mx-2 bg-zinc-100" />
-                <DropdownMenuItem 
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer text-red-600 hover:bg-red-50 transition-colors focus:bg-red-50 focus:text-red-600"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span className="font-bold text-sm">Logout</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
+            </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Link href="/login">
